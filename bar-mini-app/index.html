@@ -24,9 +24,7 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   padding:30px;
   text-align:center;
   cursor:pointer;
-  transition:0.2s;
 }
-.tile:active {transform:scale(0.97);}
 
 .categories {display:flex;overflow-x:auto;padding:10px;gap:10px;}
 .category {background:#1f1f1f;padding:10px;border-radius:10px;cursor:pointer;}
@@ -42,9 +40,7 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   display:flex;
   justify-content:space-between;
   align-items:center;
-  transition:0.2s;
 }
-.card:active {transform:scale(0.97);}
 
 .counter {display:flex;gap:10px;align-items:center;}
 
@@ -58,7 +54,6 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   cursor:pointer;
 }
 
-/* корзина */
 .cart-btn {
   position:fixed;
   bottom:20px;
@@ -71,8 +66,6 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   align-items:center;
   justify-content:center;
   font-size:22px;
-  cursor:pointer;
-
   opacity:0;
   transform:scale(0.7);
   transition:all 0.3s ease;
@@ -81,16 +74,6 @@ header {padding:20px;font-size:22px;font-weight:bold;}
 .cart-btn.show {
   opacity:1;
   transform:scale(1);
-}
-
-.cart-btn.bounce {
-  animation:bounce 0.3s ease;
-}
-
-@keyframes bounce {
-  0% {transform:scale(1);}
-  50% {transform:scale(1.15);}
-  100% {transform:scale(1);}
 }
 
 .badge {
@@ -113,22 +96,10 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   border-radius:20px 20px 0 0;
   padding:20px;
   display:none;
-  animation:slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {transform:translateY(100%);}
-  to {transform:translateY(0);}
 }
 
 .hidden {display:none;}
 .back {padding:10px;cursor:pointer;}
-
-.remove {
-  color:red;
-  margin-left:10px;
-  cursor:pointer;
-}
 </style>
 </head>
 
@@ -136,7 +107,6 @@ header {padding:20px;font-size:22px;font-weight:bold;}
 
 <header id="header">Главное меню</header>
 
-<!-- ГЛАВНАЯ -->
 <div id="home" class="home">
   <div class="tile" onclick="openMenu()">Меню</div>
   <div class="tile" onclick="openBar()">Барное меню</div>
@@ -146,27 +116,17 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   <div class="tile" onclick="openContacts()">Контакты</div>
 </div>
 
-<!-- МЕНЮ -->
 <div id="menuScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
   <div class="categories" id="categories"></div>
   <div class="menu" id="menu"></div>
 </div>
 
-<!-- КОНТАКТЫ -->
 <div id="contactsScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
-
-  <div class="home" style="padding-top:10px">
-    <div class="tile" onclick="openMap()">📍<br>Локация</div>
-    <div class="tile" onclick="openInstagram()">📸<br>Instagram</div>
-    <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
-    <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
-  </div>
 </div>
 
-<!-- КОРЗИНА -->
-<div class="cart-btn" id="cartBtn" onclick="openCart()">
+<div class="cart-btn" id="cartBtn">
   🛒
   <div class="badge" id="cartCount">0</div>
 </div>
@@ -183,23 +143,22 @@ const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPk
 const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
 
 let menuData = {};
+let itemIndex = {};
 let cart = {};
+let cache = {};
 let currentAPI = MENU_API;
 
+/* ========= INIT ========= */
+loadCart();
+updateCartCount();
+
+/* ========= NAV ========= */
 function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
 function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
-
-function openContacts(){
-  home.classList.add("hidden");
-  menuScreen.classList.add("hidden");
-  contactsScreen.classList.remove("hidden");
-  header.innerText="Контакты";
-}
 
 function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
-  contactsScreen.classList.add("hidden");
   header.innerText=title;
   loadData(currentAPI);
 }
@@ -207,31 +166,50 @@ function openScreen(title){
 function goHome(){
   home.classList.remove("hidden");
   menuScreen.classList.add("hidden");
-  contactsScreen.classList.add("hidden");
   header.innerText="Главное меню";
 }
 
+/* ========= DATA ========= */
 async function loadData(api){
-  const res=await fetch(api);
-  const data=await res.json();
+  if(cache[api]){
+    menuData = cache[api];
+    renderCategories();
+    return;
+  }
 
-  menuData={};
+  try {
+    const res = await fetch(api);
+    const data = await res.json();
 
-  data.forEach(item=>{
-    const cat=(item.category||item.Category||"").trim();
-    if(!cat)return;
+    menuData = {};
+    itemIndex = {};
 
-    if(!menuData[cat])menuData[cat]=[];
-    menuData[cat].push(item);
-  });
+    data.forEach(item=>{
+      const cat=(item.category||item.Category||"").trim();
+      const name=item.name||item.Name;
 
-  renderCategories();
-  showCategory(Object.keys(menuData)[0]);
+      if(!cat || !name) return;
+
+      if(!menuData[cat]) menuData[cat]=[];
+      menuData[cat].push(item);
+
+      itemIndex[name]=item;
+    });
+
+    cache[api]=menuData;
+    renderCategories();
+
+  } catch(e){
+    alert("Ошибка загрузки меню");
+  }
 }
 
+/* ========= RENDER ========= */
 function renderCategories(){
   categories.innerHTML="";
-  Object.keys(menuData).forEach((cat,i)=>{
+  const keys = Object.keys(menuData);
+
+  keys.forEach((cat,i)=>{
     const d=document.createElement("div");
     d.className="category";
     d.innerText=cat;
@@ -242,7 +220,11 @@ function renderCategories(){
       showCategory(cat);
     };
 
-    if(i===0)d.classList.add("active");
+    if(i===0){
+      d.classList.add("active");
+      showCategory(cat);
+    }
+
     categories.appendChild(d);
   });
 }
@@ -257,35 +239,49 @@ function showCategory(cat){
 
     const div=document.createElement("div");
     div.className="card";
+    div.dataset.name=name;
 
     div.innerHTML=`
       <div>
         <div>${name}</div>
         <div>${price} сум</div>
       </div>
-
-      <div class="counter">
-        ${
-          count===0
-          ? `<button class="btn" onclick="changeCount('${name}',1)">+</button>`
-          : `
-            <button class="btn" onclick="changeCount('${name}',-1)">-</button>
-            <span>${count}</span>
-            <button class="btn" onclick="changeCount('${name}',1)">+</button>
-          `
-        }
-      </div>
+      <div class="counter">${renderCounter(name,count)}</div>
     `;
 
     menu.appendChild(div);
   });
 }
 
+function renderCounter(name,count){
+  return count===0
+    ? `<button class="btn" data-add="${name}">+</button>`
+    : `
+      <button class="btn" data-minus="${name}">-</button>
+      <span>${count}</span>
+      <button class="btn" data-add="${name}">+</button>
+    `;
+}
+
+/* ========= EVENTS ========= */
+document.addEventListener("click",(e)=>{
+  if(e.target.dataset.add) changeCount(e.target.dataset.add,1);
+  if(e.target.dataset.minus) changeCount(e.target.dataset.minus,-1);
+  if(e.target.id==="cartBtn") openCart();
+});
+
+/* ========= CART ========= */
+let lock=false;
+
 function changeCount(name,delta){
+  if(lock) return;
+  lock=true;
+  setTimeout(()=>lock=false,80);
+
   if(!cart[name]) cart[name]={count:0,price:0};
 
-  const item = Object.values(menuData).flat().find(i => (i.name||i.Name) === name);
-  const price = parseInt((item.price||item.Price||"0").replace(/\D/g,'')) || 0;
+  const item=itemIndex[name];
+  const price=parseInt((item.price||item.Price||"0").replace(/\D/g,''))||0;
 
   cart[name].count+=delta;
   cart[name].price=price;
@@ -293,8 +289,17 @@ function changeCount(name,delta){
   if(cart[name].count<=0) delete cart[name];
   if(cart[name]?.count>10) cart[name].count=10;
 
+  saveCart();
   updateCartCount();
-  showCategory(document.querySelector(".category.active").innerText);
+  updateCardUI(name);
+}
+
+function updateCardUI(name){
+  const el=document.querySelector(`[data-name="${name}"]`);
+  if(!el) return;
+
+  const count=cart[name]?.count||0;
+  el.querySelector(".counter").innerHTML=renderCounter(name,count);
 }
 
 function updateCartCount(){
@@ -304,14 +309,12 @@ function updateCartCount(){
   if(total>0){
     cartBtn.classList.add("show");
     cartCount.innerText=total;
-
-    cartBtn.classList.add("bounce");
-    setTimeout(()=>cartBtn.classList.remove("bounce"),300);
   } else {
     cartBtn.classList.remove("show");
   }
 }
 
+/* ========= CART MODAL ========= */
 function openCart(){
   cartModal.style.display="block";
   renderCart();
@@ -331,29 +334,23 @@ function renderCart(){
     total+=sum;
 
     const div=document.createElement("div");
-    div.innerHTML=`
-      ${name} x${item.count} — ${sum} сум
-      <span class="remove" onclick="removeItem('${name}')">❌</span>
-    `;
+    div.innerHTML=`${name} x${item.count} — ${sum} сум`;
     cartItems.appendChild(div);
   });
 
-  document.getElementById("total").innerText="Итого: "+total+" сум";
+  totalEl.innerText="Итого: "+total+" сум";
 }
 
-function removeItem(name){
-  delete cart[name];
-  updateCartCount();
-  renderCart();
-  showCategory(document.querySelector(".category.active").innerText);
+/* ========= STORAGE ========= */
+function saveCart(){
+  localStorage.setItem("cart", JSON.stringify(cart));
 }
 
-/* контакты */
-function openMap(){window.open("https://maps.google.com/?q=Ташкент","_blank");}
-function openInstagram(){window.open("https://instagram.com/","_blank");}
-function openTelegram(){window.open("https://t.me/","_blank");}
-function callPhone(){window.location.href="tel:+998901234567";}
+function loadCart(){
+  cart=JSON.parse(localStorage.getItem("cart")||"{}");
+}
 
+/* ========= INIT ========= */
 loadData(MENU_API);
 
 const tg=window.Telegram.WebApp;
