@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bar App</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body {margin:0;font-family:Arial;background:#0f0f0f;color:white;}
+header {padding:20px;font-size:22px;font-weight:bold;}
+
+.home {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  padding:20px;
+}
+
+.tile {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:30px;
+  text-align:center;
+  cursor:pointer;
+}
+
+.categories {display:flex;overflow-x:auto;padding:10px;gap:10px;}
+.category {background:#1f1f1f;padding:10px;border-radius:10px;cursor:pointer;}
+.category.active {background:#00ffcc;color:black;}
+
+.menu {padding:10px;}
+
+.card {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.counter {display:flex;gap:10px;align-items:center;}
+
+.btn {
+  background:#00ffcc;
+  color:black;
+  border:none;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  cursor:pointer;
+}
+
+.cart-btn {
+  position:fixed;
+  bottom:20px;
+  left:20px;
+  background:#00ffcc;
+  width:55px;
+  height:55px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  opacity:0;
+  transform:scale(0.7);
+  transition:all 0.3s ease;
+}
+
+.cart-btn.show {
+  opacity:1;
+  transform:scale(1);
+}
+
+.badge {
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  background:red;
+  color:white;
+  font-size:12px;
+  border-radius:50%;
+  padding:4px 7px;
+}
+
+.cart-modal {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  height:80%;
+  background:#111;
+  border-radius:20px 20px 0 0;
+  padding:20px;
+  display:none;
+}
+
+.hidden {display:none;}
+.back {padding:10px;cursor:pointer;}
+</style>
+</head>
+
+<body>
+
+<header id="header">Главное меню</header>
+
+<div id="home" class="home">
+  <div class="tile" onclick="openMenu()">Меню</div>
+  <div class="tile" onclick="openBar()">Барное меню</div>
+  <div class="tile">Оставить отзыв</div>
+  <div class="tile">Фотоотчет</div>
+  <div class="tile">Акции</div>
+  <div class="tile" onclick="openContacts()">Контакты</div>
+</div>
+
+<div id="menuScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+  <div class="categories" id="categories"></div>
+  <div class="menu" id="menu"></div>
+</div>
+
+<div id="contactsScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+</div>
+
+<div class="cart-btn" id="cartBtn">
+  🛒
+  <div class="badge" id="cartCount">0</div>
+</div>
+
+<div class="cart-modal" id="cartModal">
+  <div class="back" onclick="closeCart()">← Назад</div>
+  <h3>Ваш заказ</h3>
+  <div id="cartItems"></div>
+  <div id="total"></div>
+</div>
+
+<script>
+/* ========= DOM ========= */
+const home = document.getElementById("home");
+const menuScreen = document.getElementById("menuScreen");
+const contactsScreen = document.getElementById("contactsScreen");
+const header = document.getElementById("header");
+
+const categories = document.getElementById("categories");
+const menu = document.getElementById("menu");
+
+const cartBtn = document.getElementById("cartBtn");
+const cartCount = document.getElementById("cartCount");
+
+const cartModal = document.getElementById("cartModal");
+const cartItems = document.getElementById("cartItems");
+const totalEl = document.getElementById("total");
+
+/* ========= API ========= */
+const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
+const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
+
+/* ========= STATE ========= */
+let menuData = {};
+let itemIndex = {};
+let cart = {};
+let cache = {};
+let currentAPI = MENU_API;
+
+/* ========= INIT ========= */
+loadCart();
+updateCartCount();
+
+/* ========= NAV ========= */
+function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
+function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
+
+function openContacts(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.remove("hidden");
+  header.innerText="Контакты";
+}
+
+function openScreen(title){
+  home.classList.add("hidden");
+  menuScreen.classList.remove("hidden");
+  contactsScreen.classList.add("hidden");
+  header.innerText=title;
+  loadData(currentAPI);
+}
+
+function goHome(){
+  home.classList.remove("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  header.innerText="Главное меню";
+}
+
+/* ========= DATA ========= */
+async function loadData(api){
+  if(cache[api]){
+    menuData = cache[api];
+    renderCategories();
+    return;
+  }
+
+  try {
+    const res = await fetch(api);
+    const data = await res.json();
+
+    menuData = {};
+    itemIndex = {};
+
+    data.forEach(item=>{
+      const cat=(item.category||item.Category||"").trim();
+      const name=item.name||item.Name;
+
+      if(!cat || !name) return;
+
+      if(!menuData[cat]) menuData[cat]=[];
+      menuData[cat].push(item);
+
+      itemIndex[name]=item;
+    });
+
+    cache[api]=menuData;
+    renderCategories();
+
+  } catch(e){
+    alert("Ошибка загрузки меню");
+  }
+}
+
+/* ========= RENDER ========= */
+function renderCategories(){
+  categories.innerHTML="";
+  const keys = Object.keys(menuData);
+
+  keys.forEach((cat,i)=>{
+    const d=document.createElement("div");
+    d.className="category";
+    d.innerText=cat;
+
+    d.onclick=()=>{
+      document.querySelectorAll(".category").forEach(e=>e.classList.remove("active"));
+      d.classList.add("active");
+      showCategory(cat);
+    };
+
+    if(i===0){
+      d.classList.add("active");
+      showCategory(cat);
+    }
+
+    categories.appendChild(d);
+  });
+}
+
+function showCategory(cat){
+  menu.innerHTML="";
+
+  menuData[cat].forEach(item=>{
+    const name=item.name||item.Name;
+    const price=item.price||item.Price;
+    const count=cart[name]?.count||0;
+
+    const div=document.createElement("div");
+    div.className="card";
+    div.dataset.name=name;
+
+    div.innerHTML=`
+      <div>
+        <div>${name}</div>
+        <div>${price} сум</div>
+      </div>
+      <div class="counter">${renderCounter(name,count)}</div>
+    `;
+
+    menu.appendChild(div);
+  });
+}
+
+function renderCounter(name,count){
+  return count===0
+    ? `<button class="btn" data-add="${name}">+</button>`
+    : `
+      <button class="btn" data-minus="${name}">-</button>
+      <span>${count}</span>
+      <button class="btn" data-add="${name}">+</button>
+    `;
+}
+
+/* ========= EVENTS ========= */
+document.addEventListener("click",(e)=>{
+  if(e.target.dataset.add) changeCount(e.target.dataset.add,1);
+  if(e.target.dataset.minus) changeCount(e.target.dataset.minus,-1);
+  if(e.target.id==="cartBtn") openCart();
+});
+
+/* ========= CART ========= */
+let lock=false;
+
+function changeCount(name,delta){
+  if(lock) return;
+  lock=true;
+  setTimeout(()=>lock=false,80);
+
+  if(!cart[name]) cart[name]={count:0,price:0};
+
+  const item=itemIndex[name];
+  const price=parseInt((item.price||item.Price||"0").replace(/\D/g,''))||0;
+
+  cart[name].count+=delta;
+  cart[name].price=price;
+
+  if(cart[name].count<=0) delete cart[name];
+  if(cart[name]?.count>10) cart[name].count=10;
+
+  saveCart();
+  updateCartCount();
+  updateCardUI(name);
+}
+
+function updateCardUI(name){
+  const el=document.querySelector(`[data-name="${name}"]`);
+  if(!el) return;
+
+  const count=cart[name]?.count||0;
+  el.querySelector(".counter").innerHTML=renderCounter(name,count);
+}
+
+function updateCartCount(){
+  let total=0;
+  Object.values(cart).forEach(i=>total+=i.count);
+
+  if(total>0){
+    cartBtn.classList.add("show");
+    cartCount.innerText=total;
+  } else {
+    cartBtn.classList.remove("show");
+  }
+}
+
+/* ========= CART MODAL ========= */
+function openCart(){
+  cartModal.style.display="block";
+  renderCart();
+}
+
+function closeCart(){
+  cartModal.style.display="none";
+}
+
+function renderCart(){
+  let total=0;
+  cartItems.innerHTML="";
+
+  Object.keys(cart).forEach(name=>{
+    const item=cart[name];
+    const sum=item.count*item.price;
+    total+=sum;
+
+    const div=document.createElement("div");
+    div.innerHTML=`${name} x${item.count} — ${sum} сум`;
+    cartItems.appendChild(div);
+  });
+
+  totalEl.innerText="Итого: "+total+" сум";
+}
+
+/* ========= STORAGE ========= */
+function saveCart(){
+  localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+function loadCart(){
+  cart=JSON.parse(localStorage.getItem("cart")||"{}");
+}
+
+/* ========= START ========= */
+loadData(currentAPI);
+
+const tg=window.Telegram.WebApp;
+tg.expand();
+</script>
+
+</body>
+</html>
