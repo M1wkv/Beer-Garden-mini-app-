@@ -139,9 +139,27 @@ header {padding:20px;font-size:22px;font-weight:bold;}
 </div>
 
 <script>
+/* ========= DOM ========= */
+const home = document.getElementById("home");
+const menuScreen = document.getElementById("menuScreen");
+const contactsScreen = document.getElementById("contactsScreen");
+const header = document.getElementById("header");
+
+const categories = document.getElementById("categories");
+const menu = document.getElementById("menu");
+
+const cartBtn = document.getElementById("cartBtn");
+const cartCount = document.getElementById("cartCount");
+
+const cartModal = document.getElementById("cartModal");
+const cartItems = document.getElementById("cartItems");
+const totalEl = document.getElementById("total");
+
+/* ========= API ========= */
 const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
 const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
 
+/* ========= STATE ========= */
 let menuData = {};
 let itemIndex = {};
 let cart = {};
@@ -156,9 +174,17 @@ updateCartCount();
 function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
 function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
 
+function openContacts(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.remove("hidden");
+  header.innerText="Контакты";
+}
+
 function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
+  contactsScreen.classList.add("hidden");
   header.innerText=title;
   loadData(currentAPI);
 }
@@ -166,6 +192,7 @@ function openScreen(title){
 function goHome(){
   home.classList.remove("hidden");
   menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
   header.innerText="Главное меню";
 }
 
@@ -350,8 +377,8 @@ function loadCart(){
   cart=JSON.parse(localStorage.getItem("cart")||"{}");
 }
 
-/* ========= INIT ========= */
-loadData(MENU_API);
+/* ========= START ========= */
+loadData(currentAPI);
 
 const tg=window.Telegram.WebApp;
 tg.expand();
