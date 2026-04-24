@@ -1,1 +1,1 @@
-# Beer-Garden-mini-app-
+# BG mini app
