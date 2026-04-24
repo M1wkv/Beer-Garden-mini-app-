@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+
+<!-- ========= META / HEAD ========= -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Bar App</title>
 
+<!-- ========= TELEGRAM SDK ========= -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+<!-- ========= STYLES ========= -->
 <style>
 body {margin:0;font-family:Arial;background:#0f0f0f;color:white;}
 header {padding:20px;font-size:22px;font-weight:bold;}
@@ -105,8 +109,10 @@ header {padding:20px;font-size:22px;font-weight:bold;}
 
 <body>
 
+<!-- ========= HEADER ========= -->
 <header id="header">Главное меню</header>
 
+<!-- ========= HOME SCREEN ========= -->
 <div id="home" class="home">
   <div class="tile" onclick="openMenu()">Меню</div>
   <div class="tile" onclick="openBar()">Барное меню</div>
@@ -116,21 +122,25 @@ header {padding:20px;font-size:22px;font-weight:bold;}
   <div class="tile" onclick="openContacts()">Контакты</div>
 </div>
 
+<!-- ========= MENU SCREEN ========= -->
 <div id="menuScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
   <div class="categories" id="categories"></div>
   <div class="menu" id="menu"></div>
 </div>
 
+<!-- ========= CONTACTS SCREEN ========= -->
 <div id="contactsScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
 </div>
 
+<!-- ========= CART BUTTON ========= -->
 <div class="cart-btn" id="cartBtn">
   🛒
   <div class="badge" id="cartCount">0</div>
 </div>
 
+<!-- ========= CART MODAL ========= -->
 <div class="cart-modal" id="cartModal">
   <div class="back" onclick="closeCart()">← Назад</div>
   <h3>Ваш заказ</h3>
@@ -139,7 +149,9 @@ header {padding:20px;font-size:22px;font-weight:bold;}
 </div>
 
 <script>
-/* ========= DOM ========= */
+
+
+// ========= DOM ELEMENTS =========
 const home = document.getElementById("home");
 const menuScreen = document.getElementById("menuScreen");
 const contactsScreen = document.getElementById("contactsScreen");
@@ -155,22 +167,26 @@ const cartModal = document.getElementById("cartModal");
 const cartItems = document.getElementById("cartItems");
 const totalEl = document.getElementById("total");
 
-/* ========= API ========= */
+
+// ========= API CONFIG =========
 const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
 const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
 
-/* ========= STATE ========= */
+
+// ========= GLOBAL STATE =========
 let menuData = {};
 let itemIndex = {};
 let cart = {};
 let cache = {};
 let currentAPI = MENU_API;
 
-/* ========= INIT ========= */
+
+// ========= INITIALIZATION =========
 loadCart();
 updateCartCount();
 
-/* ========= NAV ========= */
+
+// ========= NAVIGATION =========
 function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
 function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
 
@@ -196,7 +212,8 @@ function goHome(){
   header.innerText="Главное меню";
 }
 
-/* ========= DATA ========= */
+
+// ========= DATA LOADING =========
 async function loadData(api){
   if(cache[api]){
     menuData = cache[api];
@@ -231,7 +248,8 @@ async function loadData(api){
   }
 }
 
-/* ========= RENDER ========= */
+
+// ========= RENDER =========
 function renderCategories(){
   categories.innerHTML="";
   const keys = Object.keys(menuData);
@@ -290,14 +308,16 @@ function renderCounter(name,count){
     `;
 }
 
-/* ========= EVENTS ========= */
+
+// ========= EVENTS =========
 document.addEventListener("click",(e)=>{
   if(e.target.dataset.add) changeCount(e.target.dataset.add,1);
   if(e.target.dataset.minus) changeCount(e.target.dataset.minus,-1);
   if(e.target.id==="cartBtn") openCart();
 });
 
-/* ========= CART ========= */
+
+// ========= CART LOGIC =========
 let lock=false;
 
 function changeCount(name,delta){
@@ -341,7 +361,8 @@ function updateCartCount(){
   }
 }
 
-/* ========= CART MODAL ========= */
+
+// ========= CART MODAL =========
 function openCart(){
   cartModal.style.display="block";
   renderCart();
@@ -368,7 +389,8 @@ function renderCart(){
   totalEl.innerText="Итого: "+total+" сум";
 }
 
-/* ========= STORAGE ========= */
+
+// ========= STORAGE =========
 function saveCart(){
   localStorage.setItem("cart", JSON.stringify(cart));
 }
@@ -377,11 +399,13 @@ function loadCart(){
   cart=JSON.parse(localStorage.getItem("cart")||"{}");
 }
 
-/* ========= START ========= */
+
+// ========= START APP =========
 loadData(currentAPI);
 
 const tg=window.Telegram.WebApp;
 tg.expand();
+
 </script>
 
 </body>
