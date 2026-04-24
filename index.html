@@ -1,18 +1,284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bar App</title>
+
+<!-- Подключение Telegram WebApp SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+/* === БАЗОВЫЕ СТИЛИ ПРИЛОЖЕНИЯ === */
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0f0f0f;
+  color:white;
+}
+
+/* Заголовок (верхняя панель) */
+header {
+  padding:20px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+/* === ГЛАВНЫЙ ЭКРАН (плитки) === */
+.home {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  padding:20px;
+}
+
+/* Карточки (плитки меню) */
+.tile {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:30px;
+  text-align:center;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+/* Эффект нажатия */
+.tile:active {
+  transform:scale(0.97);
+}
+
+/* === КАТЕГОРИИ === */
+.categories {
+  display:flex;
+  overflow-x:auto;
+  padding:10px;
+  gap:10px;
+}
+
+/* Кнопка категории */
+.category {
+  background:#1f1f1f;
+  padding:10px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* Активная категория */
+.category.active {
+  background:#00ffcc;
+  color:black;
+}
+
+/* === СПИСОК МЕНЮ === */
+.menu {
+  padding:10px;
+}
+
+/* Карточка блюда */
+.card {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:15px;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  transition:0.2s;
+}
+
+/* Эффект нажатия */
+.card:active {
+  transform:scale(0.97);
+}
+
+/* Блок управления количеством */
+.counter {
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Кнопки + / - */
+.btn {
+  background:#00ffcc;
+  color:black;
+  border:none;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  cursor:pointer;
+}
+
+/* === КОРЗИНА (кнопка) === */
+.cart-btn {
+  position:fixed;
+  bottom:20px;
+  left:20px;
+
+  background:#00ffcc;
+  width:55px;
+  height:55px;
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:22px;
+  cursor:pointer;
+
+  /* изначально скрыта */
+  opacity:0;
+  transform:scale(0.7);
+
+  transition:all 0.3s ease;
+}
+
+/* Появление корзины */
+.cart-btn.show {
+  opacity:1;
+  transform:scale(1);
+}
+
+/* Анимация "прыжка" */
+.cart-btn.bounce {
+  animation:bounce 0.3s ease;
+}
+
+/* Ключевые кадры анимации */
+@keyframes bounce {
+  0% {transform:scale(1);}
+  50% {transform:scale(1.15);}
+  100% {transform:scale(1);}
+}
+
+/* Счетчик товаров */
+.badge {
+  position:absolute;
+  top:-5px;
+  right:-5px;
+
+  background:red;
+  color:white;
+  font-size:12px;
+
+  border-radius:50%;
+  padding:4px 7px;
+}
+
+/* === МОДАЛКА КОРЗИНЫ === */
+.cart-modal {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  height:80%;
+
+  background:#111;
+  border-radius:20px 20px 0 0;
+  padding:20px;
+
+  display:none;
+
+  /* анимация появления */
+  animation:slideUp 0.3s ease;
+}
+
+/* Анимация выезда снизу */
+@keyframes slideUp {
+  from {transform:translateY(100%);}
+  to {transform:translateY(0);}
+}
+
+/* Скрытие элементов */
+.hidden {display:none;}
+
+/* Кнопка назад */
+.back {
+  padding:10px;
+  cursor:pointer;
+}
+
+/* Кнопка удаления из корзины */
+.remove {
+  color:red;
+  margin-left:10px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- === ЗАГОЛОВОК === -->
+<header id="header">Главное меню</header>
+
+<!-- === ГЛАВНЫЙ ЭКРАН === -->
+<div id="home" class="home">
+  <div class="tile" onclick="openMenu()">Меню</div>
+  <div class="tile" onclick="openBar()">Барное меню</div>
+  <div class="tile">Оставить отзыв</div>
+  <div class="tile">Фотоотчет</div>
+  <div class="tile">Акции</div>
+  <div class="tile" onclick="openContacts()">Контакты</div>
+</div>
+
+<!-- === ЭКРАН МЕНЮ === -->
+<div id="menuScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+  <div class="categories" id="categories"></div>
+  <div class="menu" id="menu"></div>
+</div>
+
+<!-- === ЭКРАН КОНТАКТОВ === -->
+<div id="contactsScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+
+  <div class="home" style="padding-top:10px">
+    <div class="tile" onclick="openMap()">📍<br>Локация</div>
+    <div class="tile" onclick="openInstagram()">📸<br>Instagram</div>
+    <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
+    <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
+  </div>
+</div>
+
+<!-- === КНОПКА КОРЗИНЫ === -->
+<div class="cart-btn" id="cartBtn" onclick="openCart()">
+  🛒
+  <div class="badge" id="cartCount">0</div>
+</div>
+
+<!-- === МОДАЛКА КОРЗИНЫ === -->
+<div class="cart-modal" id="cartModal">
+  <div class="back" onclick="closeCart()">← Назад</div>
+  <h3>Ваш заказ</h3>
+  <div id="cartItems"></div>
+  <div id="total"></div>
+</div>
+
 <script>
+/* === API ДЛЯ ПОЛУЧЕНИЯ ДАННЫХ === */
+const MENU_API = "https://opensheet.elk.sh/...";
+const BAR_API = "https://opensheet.elk.sh/...";
 
-/* ====== API ====== */
-const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
-const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
-
-/* ====== СОСТОЯНИЕ ====== */
-let menuData = {};
-let cart = {};
+/* === СОСТОЯНИЕ ПРИЛОЖЕНИЯ === */
+let menuData = {}; // все блюда сгруппированные по категориям
+let cart = {};     // корзина пользователя
 let currentAPI = MENU_API;
 
-/* ====== НАВИГАЦИЯ ====== */
-function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
-function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
+/* === ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ === */
+function openMenu(){
+  currentAPI=MENU_API;
+  openScreen("Меню");
+}
 
+function openBar(){
+  currentAPI=BAR_API;
+  openScreen("Барное меню");
+}
+
+/* Контакты */
 function openContacts(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
@@ -20,75 +286,47 @@ function openContacts(){
   header.innerText="Контакты";
 }
 
+/* Универсальное открытие экрана меню */
 function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
   contactsScreen.classList.add("hidden");
+
   header.innerText=title;
 
   loadData(currentAPI);
 }
 
+/* Возврат на главную */
 function goHome(){
   home.classList.remove("hidden");
   menuScreen.classList.add("hidden");
   contactsScreen.classList.add("hidden");
+
   header.innerText="Главное меню";
 }
 
-/* ====== ЗАГРУЗКА ДАННЫХ (УЛУЧШЕНО) ====== */
+/* === ЗАГРУЗКА ДАННЫХ === */
 async function loadData(api){
+  const res=await fetch(api);
+  const data=await res.json();
 
-  // loader (пока грузится)
-  menu.innerHTML = "Загрузка...";
-  categories.innerHTML = "";
+  menuData={};
 
-  try {
-    const res = await fetch(api);
+  /* Группировка по категориям */
+  data.forEach(item=>{
+    const cat=(item.category||item.Category||"").trim();
+    if(!cat)return;
 
-    if(!res.ok){
-      throw new Error("Ошибка сети: " + res.status);
-    }
+    if(!menuData[cat])menuData[cat]=[];
+    menuData[cat].push(item);
+  });
 
-    const data = await res.json();
-    console.log("DATA:", data);
-
-    if(!Array.isArray(data) || data.length === 0){
-      throw new Error("Пустой ответ API");
-    }
-
-    menuData = {};
-
-    data.forEach(item=>{
-      const cat = (item.category || item.Category || "").trim();
-      if(!cat) return;
-
-      if(!menuData[cat]) menuData[cat] = [];
-      menuData[cat].push(item);
-    });
-
-    const keys = Object.keys(menuData);
-
-    if(keys.length === 0){
-      throw new Error("Нет категорий в данных");
-    }
-
-    renderCategories();
-    showCategory(keys[0]);
-
-  } catch(e) {
-    console.error("Ошибка загрузки:", e);
-
-    menu.innerHTML = `
-      <div style="padding:20px; color:red;">
-        Ошибка загрузки меню<br><br>
-        Проверь API или интернет
-      </div>
-    `;
-  }
+  renderCategories();
+  showCategory(Object.keys(menuData)[0]);
 }
 
-/* ====== КАТЕГОРИИ ====== */
+/* === ОТРИСОВКА КАТЕГОРИЙ === */
 function renderCategories(){
   categories.innerHTML="";
 
@@ -97,35 +335,34 @@ function renderCategories(){
     d.className="category";
     d.innerText=cat;
 
+    /* обработчик клика */
     d.onclick=()=>{
-      document.querySelectorAll(".category").forEach(e=>e.classList.remove("active"));
+      document.querySelectorAll(".category")
+        .forEach(e=>e.classList.remove("active"));
+
       d.classList.add("active");
       showCategory(cat);
     };
 
     if(i===0)d.classList.add("active");
+
     categories.appendChild(d);
   });
 }
 
-/* ====== МЕНЮ ====== */
+/* === ОТРИСОВКА БЛЮД === */
 function showCategory(cat){
-
-  if(!cat || !menuData[cat]){
-    menu.innerHTML = "Нет данных";
-    return;
-  }
-
   menu.innerHTML="";
 
   menuData[cat].forEach(item=>{
-    const name=item.name||item.Name||"Без названия";
-    const price=item.price||item.Price||"0";
+    const name=item.name||item.Name;
+    const price=item.price||item.Price;
     const count=cart[name]?.count||0;
 
     const div=document.createElement("div");
     div.className="card";
 
+    /* HTML карточки */
     div.innerHTML=`
       <div>
         <div>${name}</div>
@@ -149,16 +386,16 @@ function showCategory(cat){
   });
 }
 
-/* ====== КОРЗИНА ====== */
+/* === ИЗМЕНЕНИЕ КОЛИЧЕСТВА === */
 function changeCount(name,delta){
-
   if(!cart[name]) cart[name]={count:0,price:0};
 
-  const item = Object.values(menuData).flat().find(i => (i.name||i.Name) === name);
+  const item = Object.values(menuData).flat()
+    .find(i => (i.name||i.Name) === name);
 
-  if(!item) return;
-
-  const price = parseInt((item.price||item.Price||"0").replace(/\D/g,'')) || 0;
+  const price = parseInt(
+    (item.price||item.Price||"0").replace(/\D/g,'')
+  ) || 0;
 
   cart[name].count+=delta;
   cart[name].price=price;
@@ -168,28 +405,32 @@ function changeCount(name,delta){
 
   updateCartCount();
 
-  const active = document.querySelector(".category.active");
-  if(active) showCategory(active.innerText);
+  showCategory(
+    document.querySelector(".category.active").innerText
+  );
 }
 
-/* ====== СЧЕТЧИК ====== */
+/* === ОБНОВЛЕНИЕ КОРЗИНЫ === */
 function updateCartCount(){
   let total=0;
 
-  Object.values(cart).forEach(i=>total+=i.count);
+  Object.values(cart)
+    .forEach(i=>total+=i.count);
 
   if(total>0){
     cartBtn.classList.add("show");
     cartCount.innerText=total;
 
+    /* анимация */
     cartBtn.classList.add("bounce");
     setTimeout(()=>cartBtn.classList.remove("bounce"),300);
+
   } else {
     cartBtn.classList.remove("show");
   }
 }
 
-/* ====== КОРЗИНА UI ====== */
+/* === МОДАЛКА КОРЗИНЫ === */
 function openCart(){
   cartModal.style.display="block";
   renderCart();
@@ -199,6 +440,7 @@ function closeCart(){
   cartModal.style.display="none";
 }
 
+/* === ОТРИСОВКА КОРЗИНЫ === */
 function renderCart(){
   let total=0;
   cartItems.innerHTML="";
@@ -206,38 +448,47 @@ function renderCart(){
   Object.keys(cart).forEach(name=>{
     const item=cart[name];
     const sum=item.count*item.price;
+
     total+=sum;
 
     const div=document.createElement("div");
+
     div.innerHTML=`
       ${name} x${item.count} — ${sum} сум
       <span class="remove" onclick="removeItem('${name}')">❌</span>
     `;
+
     cartItems.appendChild(div);
   });
 
-  totalEl.innerText="Итого: "+total+" сум";
+  document.getElementById("total").innerText="Итого: "+total+" сум";
 }
 
+/* Удаление позиции */
 function removeItem(name){
   delete cart[name];
+
   updateCartCount();
   renderCart();
 
-  const active = document.querySelector(".category.active");
-  if(active) showCategory(active.innerText);
+  showCategory(
+    document.querySelector(".category.active").innerText
+  );
 }
 
-/* ====== КОНТАКТЫ ====== */
+/* === КОНТАКТЫ === */
 function openMap(){window.open("https://maps.google.com/?q=Ташкент","_blank");}
 function openInstagram(){window.open("https://instagram.com/","_blank");}
 function openTelegram(){window.open("https://t.me/","_blank");}
 function callPhone(){window.location.href="tel:+998901234567";}
 
-/* ====== СТАРТ ====== */
+/* === СТАРТ ПРИЛОЖЕНИЯ === */
 loadData(MENU_API);
 
+/* Инициализация Telegram Mini App */
 const tg=window.Telegram.WebApp;
 tg.expand();
-
 </script>
+
+</body>
+</html>
