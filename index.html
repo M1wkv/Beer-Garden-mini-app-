@@ -243,6 +243,16 @@ header {
   </div>
 </div>
 
+<!-- === ЭКРАН КОРЗИНЫ (вместо попапа) === -->
+<div id="cartScreen" class="hidden">
+  <div class="back" onclick="closeCart()">← Назад</div>
+
+  <h3 style="padding:10px">Ваш заказ</h3>
+
+  <div id="cartItems"></div>
+  <div id="total" style="padding:10px;font-weight:bold;"></div>
+</div>
+
 <!-- === КНОПКА КОРЗИНЫ === -->
 <div class="cart-btn" id="cartBtn" onclick="openCart()">
   🛒
