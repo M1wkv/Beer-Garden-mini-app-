@@ -1,54 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-
-<!-- =========================
-  META И ОСНОВНЫЕ НАСТРОЙКИ СТРАНИЦЫ
-  - кодировка
-  - адаптивность под мобильные устройства
-  - заголовок вкладки
-========================= -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Bar App</title>
 
-<!-- =========================
-  TELEGRAM WEB APP SDK
-  Позволяет:
-  - работать внутри Telegram Mini App
-  - управлять интерфейсом Telegram (expand, theme и т.д.)
-========================= -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<!-- =========================
-  СТИЛИ ПРИЛОЖЕНИЯ (CSS)
-========================= -->
 <style>
+body {margin:0;font-family:Arial;background:#0f0f0f;color:white;}
+header {padding:20px;font-size:22px;font-weight:bold;}
 
-/* === БАЗОВЫЕ СТИЛИ СТРАНИЦЫ ===
-   - убираем отступы
-   - задаем шрифт
-   - темный фон приложения
-*/
-body {
-  margin:0;
-  font-family:Arial;
-  background:#0f0f0f;
-  color:white;
-}
-
-/* === HEADER (верхняя панель) ===
-   - используется как заголовок экрана
-*/
-header {
-  padding:20px;
-  font-size:22px;
-  font-weight:bold;
-}
-
-/* === ГЛАВНОЕ МЕНЮ (плитки) ===
-   - сетка 2xN
-*/
 .home {
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -56,51 +18,22 @@ header {
   padding:20px;
 }
 
-/* === ПЛИТКИ В МЕНЮ ===
-   - кнопки перехода
-*/
 .tile {
   background:#1a1a1a;
   border-radius:15px;
   padding:30px;
   text-align:center;
   cursor:pointer;
+  transition:0.2s;
 }
+.tile:active {transform:scale(0.97);}
 
-/* === КАТЕГОРИИ МЕНЮ ===
-   - горизонтальный скролл
-*/
-.categories {
-  display:flex;
-  overflow-x:auto;
-  padding:10px;
-  gap:10px;
-}
+.categories {display:flex;overflow-x:auto;padding:10px;gap:10px;}
+.category {background:#1f1f1f;padding:10px;border-radius:10px;cursor:pointer;}
+.category.active {background:#00ffcc;color:black;}
 
-/* === ОТДЕЛЬНАЯ КАТЕГОРИЯ === */
-.category {
-  background:#1f1f1f;
-  padding:10px;
-  border-radius:10px;
-  cursor:pointer;
-}
+.menu {padding:10px;}
 
-/* === АКТИВНАЯ КАТЕГОРИЯ ===
-   - подсветка выбранной категории
-*/
-.category.active {
-  background:#00ffcc;
-  color:black;
-}
-
-/* === СПИСОК БЛЮД === */
-.menu {
-  padding:10px;
-}
-
-/* === КАРТОЧКА БЛЮДА ===
-   - flex для выравнивания
-*/
 .card {
   background:#1a1a1a;
   border-radius:15px;
@@ -109,16 +42,12 @@ header {
   display:flex;
   justify-content:space-between;
   align-items:center;
+  transition:0.2s;
 }
+.card:active {transform:scale(0.97);}
 
-/* === СЧЕТЧИК (+ / -) === */
-.counter {
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
+.counter {display:flex;gap:10px;align-items:center;}
 
-/* === КНОПКИ +/- === */
 .btn {
   background:#00ffcc;
   color:black;
@@ -129,38 +58,41 @@ header {
   cursor:pointer;
 }
 
-/* === КНОПКА КОРЗИНЫ (плавающая) === */
+/* корзина */
 .cart-btn {
   position:fixed;
   bottom:20px;
   left:20px;
-
   background:#00ffcc;
   width:55px;
   height:55px;
   border-radius:50%;
-
   display:flex;
   align-items:center;
   justify-content:center;
-
   font-size:22px;
+  cursor:pointer;
 
-  /* изначально скрыта */
   opacity:0;
   transform:scale(0.7);
-
-  /* плавная анимация появления */
   transition:all 0.3s ease;
 }
 
-/* === СОСТОЯНИЕ "ПОКАЗАТЬ КОРЗИНУ" === */
 .cart-btn.show {
   opacity:1;
   transform:scale(1);
 }
 
-/* === БЕЙДЖ С КОЛ-ВОМ === */
+.cart-btn.bounce {
+  animation:bounce 0.3s ease;
+}
+
+@keyframes bounce {
+  0% {transform:scale(1);}
+  50% {transform:scale(1.15);}
+  100% {transform:scale(1);}
+}
+
 .badge {
   position:absolute;
   top:-5px;
@@ -172,46 +104,39 @@ header {
   padding:4px 7px;
 }
 
-/* === МОДАЛКА КОРЗИНЫ === */
 .cart-modal {
   position:fixed;
   bottom:0;
   width:100%;
   height:80%;
-
   background:#111;
   border-radius:20px 20px 0 0;
-
   padding:20px;
-
-  /* скрыта по умолчанию */
   display:none;
+  animation:slideUp 0.3s ease;
 }
 
-/* === СКРЫТИЕ ЭЛЕМЕНТОВ === */
-.hidden {
-  display:none;
+@keyframes slideUp {
+  from {transform:translateY(100%);}
+  to {transform:translateY(0);}
 }
 
-/* === КНОПКА НАЗАД === */
-.back {
-  padding:10px;
+.hidden {display:none;}
+.back {padding:10px;cursor:pointer;}
+
+.remove {
+  color:red;
+  margin-left:10px;
   cursor:pointer;
 }
-
 </style>
 </head>
 
 <body>
 
-<!-- =========================
-  HEADER (заголовок текущего экрана)
-========================= -->
 <header id="header">Главное меню</header>
 
-<!-- =========================
-  ГЛАВНЫЙ ЭКРАН (плитки)
-========================= -->
+<!-- ГЛАВНАЯ -->
 <div id="home" class="home">
   <div class="tile" onclick="openMenu()">Меню</div>
   <div class="tile" onclick="openBar()">Барное меню</div>
@@ -221,36 +146,31 @@ header {
   <div class="tile" onclick="openContacts()">Контакты</div>
 </div>
 
-<!-- =========================
-  ЭКРАН МЕНЮ
-  - категории
-  - список блюд
-========================= -->
+<!-- МЕНЮ -->
 <div id="menuScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
   <div class="categories" id="categories"></div>
   <div class="menu" id="menu"></div>
 </div>
 
-<!-- =========================
-  ЭКРАН КОНТАКТОВ
-========================= -->
+<!-- КОНТАКТЫ -->
 <div id="contactsScreen" class="hidden">
   <div class="back" onclick="goHome()">← Назад</div>
+
+  <div class="home" style="padding-top:10px">
+    <div class="tile" onclick="openMap()">📍<br>Локация</div>
+    <div class="tile" onclick="openInstagram()">📸<br>Instagram</div>
+    <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
+    <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
+  </div>
 </div>
 
-<!-- =========================
-  КНОПКА КОРЗИНЫ
-  - появляется при добавлении товаров
-========================= -->
-<div class="cart-btn" id="cartBtn">
+<!-- КОРЗИНА -->
+<div class="cart-btn" id="cartBtn" onclick="openCart()">
   🛒
   <div class="badge" id="cartCount">0</div>
 </div>
 
-<!-- =========================
-  МОДАЛКА КОРЗИНЫ
-========================= -->
 <div class="cart-modal" id="cartModal">
   <div class="back" onclick="closeCart()">← Назад</div>
   <h3>Ваш заказ</h3>
@@ -259,55 +179,13 @@ header {
 </div>
 
 <script>
+const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
+const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
 
-/* =========================
-   DOM ЭЛЕМЕНТЫ
-   - получаем доступ к элементам страницы
-========================= */
-const home = document.getElementById("home");
-const menuScreen = document.getElementById("menuScreen");
-const contactsScreen = document.getElementById("contactsScreen");
-const header = document.getElementById("header");
-
-const categories = document.getElementById("categories");
-const menu = document.getElementById("menu");
-
-const cartBtn = document.getElementById("cartBtn");
-const cartCount = document.getElementById("cartCount");
-
-const cartModal = document.getElementById("cartModal");
-const cartItems = document.getElementById("cartItems");
-const totalEl = document.getElementById("total");
-
-
-/* =========================
-   API (источники данных)
-   - Google Sheets через opensheet
-========================= */
-const MENU_API = "https://opensheet.elk.sh/...";
-const BAR_API = "https://opensheet.elk.sh/...";
-
-
-/* =========================
-   СОСТОЯНИЕ ПРИЛОЖЕНИЯ
-========================= */
-let menuData = {};   // сгруппированное меню
-let itemIndex = {};  // быстрый доступ к товару по имени
-let cart = {};       // корзина
-let cache = {};      // кэш API
+let menuData = {};
+let cart = {};
 let currentAPI = MENU_API;
 
-
-/* =========================
-   ИНИЦИАЛИЗАЦИЯ
-========================= */
-loadCart();
-updateCartCount();
-
-
-/* =========================
-   НАВИГАЦИЯ МЕЖДУ ЭКРАНАМИ
-========================= */
 function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
 function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
 
@@ -333,60 +211,27 @@ function goHome(){
   header.innerText="Главное меню";
 }
 
-
-/* =========================
-   ЗАГРУЗКА ДАННЫХ
-   - fetch API
-   - кэширование
-========================= */
 async function loadData(api){
+  const res=await fetch(api);
+  const data=await res.json();
 
-  /* если есть в кэше — не грузим заново */
-  if(cache[api]){
-    menuData = cache[api];
-    renderCategories();
-    return;
-  }
+  menuData={};
 
-  try {
-    const res = await fetch(api);
-    const data = await res.json();
+  data.forEach(item=>{
+    const cat=(item.category||item.Category||"").trim();
+    if(!cat)return;
 
-    menuData = {};
-    itemIndex = {};
+    if(!menuData[cat])menuData[cat]=[];
+    menuData[cat].push(item);
+  });
 
-    /* группировка по категориям */
-    data.forEach(item=>{
-      const cat=(item.category||item.Category||"").trim();
-      const name=item.name||item.Name;
-
-      if(!cat || !name) return;
-
-      if(!menuData[cat]) menuData[cat]=[];
-      menuData[cat].push(item);
-
-      itemIndex[name]=item;
-    });
-
-    cache[api]=menuData;
-    renderCategories();
-
-  } catch(e){
-    alert("Ошибка загрузки меню");
-  }
+  renderCategories();
+  showCategory(Object.keys(menuData)[0]);
 }
 
-
-/* =========================
-   РЕНДЕР UI
-========================= */
-
-/* категории */
 function renderCategories(){
   categories.innerHTML="";
-  const keys = Object.keys(menuData);
-
-  keys.forEach((cat,i)=>{
+  Object.keys(menuData).forEach((cat,i)=>{
     const d=document.createElement("div");
     d.className="category";
     d.innerText=cat;
@@ -397,17 +242,11 @@ function renderCategories(){
       showCategory(cat);
     };
 
-    /* первая категория активна */
-    if(i===0){
-      d.classList.add("active");
-      showCategory(cat);
-    }
-
+    if(i===0)d.classList.add("active");
     categories.appendChild(d);
   });
 }
 
-/* товары */
 function showCategory(cat){
   menu.innerHTML="";
 
@@ -418,85 +257,46 @@ function showCategory(cat){
 
     const div=document.createElement("div");
     div.className="card";
-    div.dataset.name=name;
 
     div.innerHTML=`
       <div>
         <div>${name}</div>
         <div>${price} сум</div>
       </div>
-      <div class="counter">${renderCounter(name,count)}</div>
+
+      <div class="counter">
+        ${
+          count===0
+          ? `<button class="btn" onclick="changeCount('${name}',1)">+</button>`
+          : `
+            <button class="btn" onclick="changeCount('${name}',-1)">-</button>
+            <span>${count}</span>
+            <button class="btn" onclick="changeCount('${name}',1)">+</button>
+          `
+        }
+      </div>
     `;
 
     menu.appendChild(div);
   });
 }
 
-/* счетчик +/- */
-function renderCounter(name,count){
-  return count===0
-    ? `<button class="btn" data-add="${name}">+</button>`
-    : `
-      <button class="btn" data-minus="${name}">-</button>
-      <span>${count}</span>
-      <button class="btn" data-add="${name}">+</button>
-    `;
-}
-
-
-/* =========================
-   ОБРАБОТКА СОБЫТИЙ
-========================= */
-document.addEventListener("click",(e)=>{
-  if(e.target.dataset.add) changeCount(e.target.dataset.add,1);
-  if(e.target.dataset.minus) changeCount(e.target.dataset.minus,-1);
-  if(e.target.id==="cartBtn") openCart();
-});
-
-
-/* =========================
-   ЛОГИКА КОРЗИНЫ
-========================= */
-let lock=false;
-
-/* изменение количества */
 function changeCount(name,delta){
-
-  /* защита от быстрого клика */
-  if(lock) return;
-  lock=true;
-  setTimeout(()=>lock=false,80);
-
   if(!cart[name]) cart[name]={count:0,price:0};
 
-  const item=itemIndex[name];
-
-  /* очистка цены от текста */
-  const price=parseInt((item.price||item.Price||"0").replace(/\D/g,''))||0;
+  const item = Object.values(menuData).flat().find(i => (i.name||i.Name) === name);
+  const price = parseInt((item.price||item.Price||"0").replace(/\D/g,'')) || 0;
 
   cart[name].count+=delta;
   cart[name].price=price;
 
   if(cart[name].count<=0) delete cart[name];
-
-  /* ограничение */
   if(cart[name]?.count>10) cart[name].count=10;
 
-  saveCart();
   updateCartCount();
-  updateCardUI(name);
+  showCategory(document.querySelector(".category.active").innerText);
 }
 
-/* обновление карточки */
-function updateCardUI(name){
-  const el=document.querySelector(`[data-name="${name}"]`);
-  if(!el) return;
-
-  const count=cart[name]?.count||0;
-  el.querySelector(".counter").innerHTML=renderCounter(name,count);
-}
-
-/* обновление счетчика корзины */
 function updateCartCount(){
   let total=0;
   Object.values(cart).forEach(i=>total+=i.count);
@@ -504,15 +304,14 @@ function updateCartCount(){
   if(total>0){
     cartBtn.classList.add("show");
     cartCount.innerText=total;
+
+    cartBtn.classList.add("bounce");
+    setTimeout(()=>cartBtn.classList.remove("bounce"),300);
   } else {
     cartBtn.classList.remove("show");
   }
 }
 
-
-/* =========================
-   МОДАЛКА КОРЗИНЫ
-========================= */
 function openCart(){
   cartModal.style.display="block";
   renderCart();
@@ -522,7 +321,6 @@ function closeCart(){
   cartModal.style.display="none";
 }
 
-/* рендер корзины */
 function renderCart(){
   let total=0;
   cartItems.innerHTML="";
@@ -533,36 +331,33 @@ function renderCart(){
     total+=sum;
 
     const div=document.createElement("div");
-    div.innerHTML=`${name} x${item.count} — ${sum} сум`;
+    div.innerHTML=`
+      ${name} x${item.count} — ${sum} сум
+      <span class="remove" onclick="removeItem('${name}')">❌</span>
+    `;
     cartItems.appendChild(div);
   });
 
-  totalEl.innerText="Итого: "+total+" сум";
+  document.getElementById("total").innerText="Итого: "+total+" сум";
 }
 
-
-/* =========================
-   LOCAL STORAGE
-   - сохранение корзины
-========================= */
-function saveCart(){
-  localStorage.setItem("cart", JSON.stringify(cart));
+function removeItem(name){
+  delete cart[name];
+  updateCartCount();
+  renderCart();
+  showCategory(document.querySelector(".category.active").innerText);
 }
 
-function loadCart(){
-  cart=JSON.parse(localStorage.getItem("cart")||"{}");
-}
+/* контакты */
+function openMap(){window.open("https://maps.google.com/?q=Ташкент","_blank");}
+function openInstagram(){window.open("https://instagram.com/","_blank");}
+function openTelegram(){window.open("https://t.me/","_blank");}
+function callPhone(){window.location.href="tel:+998901234567";}
 
+loadData(MENU_API);
 
-/* =========================
-   ЗАПУСК ПРИЛОЖЕНИЯ
-========================= */
-loadData(currentAPI);
-
-/* интеграция с Telegram */
 const tg=window.Telegram.WebApp;
 tg.expand();
-
 </script>
 
 </body>
