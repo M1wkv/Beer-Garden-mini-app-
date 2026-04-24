@@ -1,0 +1,134 @@
+@font-face {
+  font-family: "HelveticaNeueCyr";
+  src: url("../font/HelveticaNeueCyr-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #050505;
+  --surface: #111111;
+  --surface-soft: #151515;
+  --border: rgba(184, 128, 88, 0.72);
+  --text: #ffffff;
+  --muted: #8f8f8f;
+  --accent: #b98058;
+  --accent-hover: #c38b62;
+  --accent-text: #ffffff;
+  --danger: #ff5a5a;
+  --radius: 16px;
+  --app-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-height: 100dvh;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg);
+}
+
+html,
+body {
+  min-height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  min-height: var(--app-height);
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--text);
+  font-family: "HelveticaNeueCyr", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-weight: 500;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+header {
+  padding: 48px 36px 20px 86px;
+  color: var(--text);
+  font-size: 31px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+body[data-screen="home"] header {
+  display: none;
+}
+
+main {
+  min-height: var(--app-height);
+}
+
+.screen {
+  position: relative;
+  width: min(100%, 390px);
+  min-height: var(--app-height);
+  margin: 0 auto;
+  padding: 0 36px 86px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.back {
+  position: absolute;
+  top: 41px;
+  left: 28px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.back img {
+  width: 29px;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 380px) {
+  header {
+    padding-left: 80px;
+    font-size: 29px;
+  }
+
+  .screen {
+    padding-right: 30px;
+    padding-left: 30px;
+  }
+
+  .back {
+    left: 23px;
+  }
+}
