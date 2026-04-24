@@ -1,0 +1,86 @@
+:root {
+  --bg: var(--tg-theme-bg-color, #0f0f0f);
+  --surface: var(--tg-theme-secondary-bg-color, #1a1a1a);
+  --surface-strong: #1f1f1f;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: var(--tg-theme-text-color, #ffffff);
+  --muted: var(--tg-theme-hint-color, #9a9a9a);
+  --accent: var(--tg-theme-button-color, #00ffcc);
+  --accent-text: var(--tg-theme-button-text-color, #000000);
+  --danger: #ff4d4d;
+  --radius: 12px;
+  --app-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-height: 100dvh;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg);
+}
+
+html,
+body {
+  min-height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  min-height: var(--app-height);
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+header {
+  padding: 20px 20px 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+main {
+  min-height: calc(var(--app-height) - 58px);
+}
+
+.screen {
+  padding: 10px 20px 96px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}

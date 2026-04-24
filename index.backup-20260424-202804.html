@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Bar App</title>
+
+<!-- Подключение Telegram WebApp SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js?62"></script>
+
+<style>
+/* === БАЗОВЫЕ СТИЛИ ПРИЛОЖЕНИЯ === */
+html {
+  width:100%;
+  height:100%;
+  background:#0f0f0f;
+  --app-height:100vh;
+}
+
+@supports (height:100dvh) {
+  html {
+    --app-height:100dvh;
+  }
+}
+
+html,
+body {
+  min-height:100%;
+  overscroll-behavior:none;
+}
+
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0f0f0f;
+  color:white;
+  min-height:var(--app-height);
+  overflow-x:hidden;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+/* Заголовок (верхняя панель) */
+header {
+  padding:20px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+/* === ГЛАВНЫЙ ЭКРАН (плитки) === */
+.home {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  padding:20px;
+}
+
+/* Карточки (плитки меню) */
+.tile {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:30px;
+  text-align:center;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+/* Эффект нажатия */
+.tile:active {
+  transform:scale(0.97);
+}
+
+/* === КАТЕГОРИИ === */
+.categories {
+  display:flex;
+  overflow-x:auto;
+  padding:10px;
+  gap:10px;
+}
+
+/* Кнопка категории */
+.category {
+  background:#1f1f1f;
+  padding:10px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* Активная категория */
+.category.active {
+  background:#00ffcc;
+  color:black;
+}
+
+/* === СПИСОК МЕНЮ === */
+.menu {
+  padding:10px;
+}
+
+/* Карточка блюда */
+.card {
+  background:#1a1a1a;
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:15px;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  transition:0.2s;
+}
+
+/* Эффект нажатия */
+.card:active {
+  transform:scale(0.97);
+}
+
+/* Блок управления количеством */
+.counter {
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Кнопки + / - */
+.btn {
+  background:#00ffcc;
+  color:black;
+  border:none;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  cursor:pointer;
+}
+
+/* === КОРЗИНА (кнопка) === */
+.cart-btn {
+  position:fixed;
+  bottom:20px;
+  left:20px;
+
+  background:#00ffcc;
+  width:55px;
+  height:55px;
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:22px;
+  cursor:pointer;
+
+  /* изначально скрыта */
+  opacity:0;
+  transform:scale(0.7);
+
+  transition:all 0.3s ease;
+}
+
+/* Появление корзины */
+.cart-btn.show {
+  opacity:1;
+  transform:scale(1);
+}
+
+/* Анимация "прыжка" */
+.cart-btn.bounce {
+  animation:bounce 0.3s ease;
+}
+
+/* Ключевые кадры анимации */
+@keyframes bounce {
+  0% {transform:scale(1);}
+  50% {transform:scale(1.15);}
+  100% {transform:scale(1);}
+}
+
+/* Счетчик товаров */
+.badge {
+  position:absolute;
+  top:-5px;
+  right:-5px;
+
+  background:red;
+  color:white;
+  font-size:12px;
+
+  border-radius:50%;
+  padding:4px 7px;
+}
+
+#cartScreen {
+  padding:15px;
+}
+
+/* Анимация выезда снизу */
+@keyframes slideUp {
+  from {transform:translateY(100%);}
+  to {transform:translateY(0);}
+}
+
+/* Скрытие элементов */
+.hidden {display:none;}
+
+/* Кнопка назад */
+.back {
+  padding:10px;
+  cursor:pointer;
+}
+
+/* Кнопка удаления из корзины */
+.remove {
+  color:red;
+  margin-left:10px;
+  cursor:pointer;
+}
+
+#reservationScreen {
+  padding:15px;
+}
+
+.reservation-form {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:10px;
+}
+
+.reservation-form label {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:14px;
+}
+
+.reservation-form input,
+.reservation-form textarea {
+  background:#1a1a1a;
+  color:white;
+  border:1px solid #2a2a2a;
+  border-radius:10px;
+  padding:12px;
+  font:inherit;
+}
+
+.reservation-form textarea {
+  min-height:80px;
+  resize:vertical;
+}
+
+.submit-btn {
+  background:#00ffcc;
+  color:black;
+  border:none;
+  border-radius:10px;
+  padding:14px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.status {
+  min-height:20px;
+  padding:0 10px;
+  color:#00ffcc;
+}
+</style>
+</head>
+
+<body>
+
+<!-- === ЗАГОЛОВОК === -->
+<header id="header">Главное меню</header>
+
+<!-- === ГЛАВНЫЙ ЭКРАН === -->
+<div id="home" class="home">
+  <div class="tile" onclick="openMenu()">Меню</div>
+  <div class="tile" onclick="openBar()">Барное меню</div>
+  <div class="tile" onclick="openReservation()">Бронирование</div>
+  <div class="tile">Оставить отзыв</div>
+  <div class="tile">Фотоотчет</div>
+  <div class="tile">Акции</div>
+  <div class="tile" onclick="openContacts()">Контакты</div>
+</div>
+
+<!-- === ЭКРАН МЕНЮ === -->
+<div id="menuScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+  <div class="categories" id="categories"></div>
+  <div class="menu" id="menu"></div>
+</div>
+
+<!-- === ЭКРАН КОНТАКТОВ === -->
+<div id="contactsScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+
+  <div class="home" style="padding-top:10px">
+    <div class="tile" onclick="openMap()">📍<br>Локация</div>
+    <div class="tile" onclick="openInstagram()">📸<br>Instagram</div>
+    <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
+    <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
+  </div>
+</div>
+
+<!-- === ЭКРАН БРОНИРОВАНИЯ === -->
+<div id="reservationScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+
+  <form class="reservation-form" onsubmit="submitReservation(event)">
+    <label>
+      Имя
+      <input id="reservationName" type="text" autocomplete="name" required />
+    </label>
+
+    <label>
+      Телефон
+      <input id="reservationPhone" type="tel" autocomplete="tel" required />
+    </label>
+
+    <label>
+      Дата
+      <input id="reservationDate" type="date" required />
+    </label>
+
+    <label>
+      Время
+      <input id="reservationTime" type="time" required />
+    </label>
+
+    <label>
+      Количество гостей
+      <input id="reservationGuests" type="number" min="1" max="30" value="2" required />
+    </label>
+
+    <label>
+      Комментарий
+      <textarea id="reservationComment" placeholder="Пожелания по столику"></textarea>
+    </label>
+
+    <button class="submit-btn" type="submit">Отправить заявку</button>
+  </form>
+
+  <div class="status" id="reservationStatus"></div>
+</div>
+<!-- === КНОПКА КОРЗИНЫ === -->
+<div class="cart-btn" id="cartBtn" onclick="openCart()">
+  🛒
+  <div class="badge" id="cartCount">0</div>
+</div>
+
+<!-- === ЭКРАН КОРЗИНЫ === -->
+<div id="cartScreen" class="hidden">
+  <div class="back" onclick="goBackFromCart()">← Назад</div>
+  <h3>Ваш заказ</h3>
+  <div id="cartItems"></div>
+  <div id="total"></div>
+</div>
+
+<script>
+/* === API ДЛЯ ПОЛУЧЕНИЯ ДАННЫХ === */
+const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
+const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
+
+/* === СОСТОЯНИЕ ПРИЛОЖЕНИЯ === */
+let menuData = {}; // все блюда сгруппированные по категориям
+let cart = {};     // корзина пользователя
+let currentAPI = MENU_API;
+
+/* === ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ === */
+function openMenu(){
+  currentAPI=MENU_API;
+  openScreen("Меню");
+}
+
+function openBar(){
+  currentAPI=BAR_API;
+  openScreen("Барное меню");
+}
+
+/* Контакты */
+function openContacts(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
+  contactsScreen.classList.remove("hidden");
+  header.innerText="Контакты";
+}
+
+
+/* Бронирование */
+function openReservation(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
+  reservationScreen.classList.remove("hidden");
+
+  header.innerText="Бронирование";
+}
+/* Универсальное открытие экрана меню */
+function openScreen(title){
+  home.classList.add("hidden");
+  menuScreen.classList.remove("hidden");
+  contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
+
+  header.innerText=title;
+
+  loadData(currentAPI);
+}
+
+/* Возврат на главную */
+function goHome(){
+  home.classList.remove("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
+
+  header.innerText="Главное меню";
+}
+
+/* === ЗАГРУЗКА ДАННЫХ === */
+async function loadData(api){
+  try {
+    categories.replaceChildren();
+    menu.textContent = "Загрузка...";
+
+    const res=await fetch(api);
+    if(!res.ok) throw new Error("Не удалось загрузить меню");
+
+    const data=await res.json();
+    menuData={};
+
+    /* Группировка по категориям */
+    data.forEach(item=>{
+      const cat=(item.category||item.Category||"").trim();
+      if(!cat)return;
+
+      if(!menuData[cat])menuData[cat]=[];
+      menuData[cat].push(item);
+    });
+
+    const firstCategory = Object.keys(menuData)[0];
+    renderCategories();
+
+    if(firstCategory){
+      showCategory(firstCategory);
+    } else {
+      menu.textContent = "Меню пока пустое";
+    }
+  } catch (error) {
+    console.error(error);
+    categories.replaceChildren();
+    menu.textContent = "Не удалось загрузить меню. Попробуйте позже.";
+  }
+}
+
+/* === ОТРИСОВКА КАТЕГОРИЙ === */
+function renderCategories(){
+  categories.replaceChildren();
+
+  Object.keys(menuData).forEach((cat,i)=>{
+    const d=document.createElement("div");
+    d.className="category";
+    d.innerText=cat;
+
+    /* обработчик клика */
+    d.onclick=()=>{
+      document.querySelectorAll(".category")
+        .forEach(e=>e.classList.remove("active"));
+
+      d.classList.add("active");
+      showCategory(cat);
+    };
+
+    if(i===0)d.classList.add("active");
+
+    categories.appendChild(d);
+  });
+}
+
+/* === ОТРИСОВКА БЛЮД === */
+function showCategory(cat){
+  menu.replaceChildren();
+
+  if(!cat || !menuData[cat]){
+    menu.textContent = "Выберите категорию";
+    return;
+  }
+
+  menuData[cat].forEach(item=>{
+    const name=item.name||item.Name||"Без названия";
+    const price=item.price||item.Price||"0";
+    const count=cart[name]?.count||0;
+
+    const div=document.createElement("div");
+    div.className="card";
+
+    const info=document.createElement("div");
+
+    const title=document.createElement("div");
+    title.textContent=name;
+
+    const priceText=document.createElement("div");
+    priceText.textContent=`${price} сум`;
+
+    info.append(title, priceText);
+
+    const counter=document.createElement("div");
+    counter.className="counter";
+
+    if(count===0){
+      counter.appendChild(createCountButton("+", () => changeCount(name, 1)));
+    } else {
+      const countText=document.createElement("span");
+      countText.textContent=count;
+
+      counter.append(
+        createCountButton("-", () => changeCount(name, -1)),
+        countText,
+        createCountButton("+", () => changeCount(name, 1))
+      );
+    }
+
+    div.append(info, counter);
+    menu.appendChild(div);
+  });
+}
+
+function createCountButton(text, onClick){
+  const button=document.createElement("button");
+  button.className="btn";
+  button.type="button";
+  button.textContent=text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function getActiveCategory(){
+  return document.querySelector(".category.active")?.innerText;
+}
+
+/* === ИЗМЕНЕНИЕ КОЛИЧЕСТВА === */
+function changeCount(name,delta){
+  const item = Object.values(menuData).flat()
+    .find(i => (i.name||i.Name) === name);
+
+  if(!item) return;
+  if(!cart[name]) cart[name]={count:0,price:0};
+
+  const price = parseInt(
+    String(item.price||item.Price||"0").replace(/\D/g,'')
+  ) || 0;
+
+  cart[name].count+=delta;
+  cart[name].price=price;
+
+  if(cart[name].count<=0) delete cart[name];
+  if(cart[name]?.count>10) cart[name].count=10;
+
+  updateCartCount();
+  showCategory(getActiveCategory());
+}
+
+/* === ОБНОВЛЕНИЕ КОРЗИНЫ === */
+function updateCartCount(){
+  let total=0;
+
+  Object.values(cart)
+    .forEach(i=>total+=i.count);
+
+  if(total>0){
+    cartBtn.classList.add("show");
+    cartCount.innerText=total;
+
+    /* анимация */
+    cartBtn.classList.add("bounce");
+    setTimeout(()=>cartBtn.classList.remove("bounce"),300);
+
+  } else {
+    cartBtn.classList.remove("show");
+    cartCount.innerText=0;
+  }
+}
+
+/* === ЭКРАН КОРЗИНЫ === */
+function openCart(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
+  cartScreen.classList.remove("hidden");
+
+  header.innerText = "Ваш заказ";
+
+  renderCart();
+}
+
+function goBackFromCart(){
+  cartScreen.classList.add("hidden");
+  menuScreen.classList.remove("hidden");
+
+  header.innerText = currentAPI===BAR_API ? "Барное меню" : "Меню";
+}
+
+/* === ОТРИСОВКА КОРЗИНЫ === */
+function renderCart(){
+  let total=0;
+  cartItems.replaceChildren();
+
+  Object.keys(cart).forEach(name=>{
+    const item=cart[name];
+    const sum=item.count*item.price;
+
+    total+=sum;
+
+    const div=document.createElement("div");
+    const text=document.createElement("span");
+    text.textContent=`${name} x${item.count} — ${sum} сум`;
+
+    const remove=document.createElement("span");
+    remove.className="remove";
+    remove.textContent="❌";
+    remove.addEventListener("click", () => removeItem(name));
+
+    div.append(text, remove);
+    cartItems.appendChild(div);
+  });
+  document.getElementById("total").innerText="Итого: "+total+" сум";
+}
+
+/* Удаление позиции */
+function removeItem(name){
+  delete cart[name];
+
+  updateCartCount();
+  renderCart();
+
+  const activeCategory = getActiveCategory();
+  if(activeCategory) showCategory(activeCategory);
+}
+
+
+/* === БРОНИРОВАНИЕ === */
+function submitReservation(event){
+  event.preventDefault();
+
+  const reservation = {
+    type: "reservation",
+    name: reservationName.value.trim(),
+    phone: reservationPhone.value.trim(),
+    date: reservationDate.value,
+    time: reservationTime.value,
+    guests: reservationGuests.value,
+    comment: reservationComment.value.trim()
+  };
+
+  reservationStatus.innerText = "Заявка отправлена. Мы скоро свяжемся с вами.";
+
+  if(tg?.sendData){
+    tg.sendData(JSON.stringify(reservation));
+    return;
+  }
+
+  alert("Заявка на бронирование отправлена");
+}
+/* === КОНТАКТЫ === */
+function openMap(){window.open("https://maps.google.com/?q=Ташкент","_blank");}
+function openInstagram(){window.open("https://instagram.com/","_blank");}
+function openTelegram(){window.open("https://t.me/","_blank");}
+function callPhone(){window.location.href="tel:+998901234567";}
+
+/* === СТАРТ ПРИЛОЖЕНИЯ === */
+loadData(MENU_API);
+
+/* Инициализация Telegram Mini App */
+const tg=window.Telegram?.WebApp;
+if(tg){
+  const setAppHeight=()=>{
+    const height=tg.viewportStableHeight || tg.viewportHeight || window.visualViewport?.height || window.innerHeight;
+    if(height){
+      document.documentElement.style.setProperty("--app-height", `${height}px`);
+    }
+  };
+
+  const openFullscreen=()=>{
+    tg.expand();
+
+    if(tg.isVersionAtLeast?.("8.0") && !tg.isFullscreen){
+      tg.requestFullscreen?.();
+    }
+  };
+
+  tg.ready();
+  tg.setHeaderColor?.("#0f0f0f");
+  tg.setBackgroundColor?.("#0f0f0f");
+  tg.setBottomBarColor?.("#0f0f0f");
+  tg.disableVerticalSwipes?.();
+
+  setAppHeight();
+  openFullscreen();
+
+  [250, 700, 1500].forEach((delay)=>{
+    setTimeout(()=>{
+      setAppHeight();
+      openFullscreen();
+    }, delay);
+  });
+
+  tg.onEvent?.("viewportChanged", setAppHeight);
+  tg.onEvent?.("fullscreenChanged", setAppHeight);
+  window.visualViewport?.addEventListener("resize", setAppHeight);
+  window.addEventListener("resize", setAppHeight);
+}
+</script>
+
+</body>
+</html>
+
+
+
+
