@@ -1,287 +1,18 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-<!-- Заголовок страницы -->
-<title>Bar App</title>
-
-<!-- Подключение Telegram WebApp API -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<style>
-
-/* ====== БАЗОВЫЕ СТИЛИ ====== */
-body {
-  margin:0; /* убираем отступы браузера */
-  font-family:Arial; /* основной шрифт */
-  background:#0f0f0f; /* темный фон */
-  color:white; /* основной цвет текста */
-}
-
-/* Заголовок сверху */
-header {
-  padding:20px;
-  font-size:22px;
-  font-weight:bold;
-}
-
-/* ====== ГЛАВНЫЙ ЭКРАН (ПЛИТКИ) ====== */
-.home {
-  display:grid; /* сетка */
-  grid-template-columns:1fr 1fr; /* 2 колонки */
-  gap:15px; /* расстояние между плитками */
-  padding:20px;
-}
-
-/* Карточки (кнопки) на главной */
-.tile {
-  background:#1a1a1a;
-  border-radius:15px;
-  padding:30px;
-  text-align:center;
-  cursor:pointer;
-  transition:0.2s; /* плавность нажатия */
-}
-
-/* Эффект при нажатии */
-.tile:active {
-  transform:scale(0.97);
-}
-
-/* ====== КАТЕГОРИИ ====== */
-.categories {
-  display:flex;
-  overflow-x:auto; /* горизонтальный скролл */
-  padding:10px;
-  gap:10px;
-}
-
-/* Одна категория */
-.category {
-  background:#1f1f1f;
-  padding:10px;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-/* Активная категория */
-.category.active {
-  background:#00ffcc;
-  color:black;
-}
-
-/* ====== СПИСОК МЕНЮ ====== */
-.menu {
-  padding:10px;
-}
-
-/* Карточка блюда */
-.card {
-  background:#1a1a1a;
-  border-radius:15px;
-  padding:15px;
-  margin-bottom:15px;
-  display:flex;
-  justify-content:space-between; /* текст слева, кнопки справа */
-  align-items:center;
-  transition:0.2s;
-}
-
-/* Анимация нажатия */
-.card:active {
-  transform:scale(0.97);
-}
-
-/* Блок счетчика +/- */
-.counter {
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-/* Кнопки +/- */
-.btn {
-  background:#00ffcc;
-  color:black;
-  border:none;
-  border-radius:50%;
-  width:32px;
-  height:32px;
-  cursor:pointer;
-}
-
-/* ====== КОРЗИНА (КНОПКА) ====== */
-.cart-btn {
-  position:fixed;
-  bottom:20px;
-  left:20px;
-  background:#00ffcc;
-  width:55px;
-  height:55px;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:22px;
-  cursor:pointer;
-
-  /* изначально скрыта */
-  opacity:0;
-  transform:scale(0.7);
-  transition:all 0.3s ease;
-}
-
-/* когда появляется */
-.cart-btn.show {
-  opacity:1;
-  transform:scale(1);
-}
-
-/* анимация "прыжка" */
-.cart-btn.bounce {
-  animation:bounce 0.3s ease;
-}
-
-/* ключевые кадры анимации */
-@keyframes bounce {
-  0% {transform:scale(1);}
-  50% {transform:scale(1.15);}
-  100% {transform:scale(1);}
-}
-
-/* бейдж с количеством */
-.badge {
-  position:absolute;
-  top:-5px;
-  right:-5px;
-  background:red;
-  color:white;
-  font-size:12px;
-  border-radius:50%;
-  padding:4px 7px;
-}
-
-/* ====== МОДАЛКА КОРЗИНЫ ====== */
-.cart-modal {
-  position:fixed;
-  bottom:0;
-  width:100%;
-  height:80%;
-  background:#111;
-  border-radius:20px 20px 0 0;
-  padding:20px;
-  display:none; /* скрыта по умолчанию */
-  animation:slideUp 0.3s ease;
-}
-
-/* анимация выезда снизу */
-@keyframes slideUp {
-  from {transform:translateY(100%);}
-  to {transform:translateY(0);}
-}
-
-/* универсальный класс скрытия */
-.hidden {display:none;}
-
-/* кнопка назад */
-.back {
-  padding:10px;
-  cursor:pointer;
-}
-
-/* кнопка удаления */
-.remove {
-  color:red;
-  margin-left:10px;
-  cursor:pointer;
-}
-
-</style>
-</head>
-
-<body>
-
-<!-- ====== HEADER ====== -->
-<header id="header">Главное меню</header>
-
-<!-- ====== ГЛАВНАЯ ====== -->
-<div id="home" class="home">
-  <!-- Плитки навигации -->
-  <div class="tile" onclick="openMenu()">Меню</div>
-  <div class="tile" onclick="openBar()">Барное меню</div>
-  <div class="tile">Оставить отзыв</div>
-  <div class="tile">Фотоотчет</div>
-  <div class="tile">Акции</div>
-  <div class="tile" onclick="openContacts()">Контакты</div>
-</div>
-
-<!-- ====== ЭКРАН МЕНЮ ====== -->
-<div id="menuScreen" class="hidden">
-  <div class="back" onclick="goHome()">← Назад</div>
-
-  <!-- категории -->
-  <div class="categories" id="categories"></div>
-
-  <!-- список блюд -->
-  <div class="menu" id="menu"></div>
-</div>
-
-<!-- ====== КОНТАКТЫ ====== -->
-<div id="contactsScreen" class="hidden">
-  <div class="back" onclick="goHome()">← Назад</div>
-
-  <div class="home" style="padding-top:10px">
-    <div class="tile" onclick="openMap()">📍<br>Локация</div>
-    <div class="tile" onclick="openInstagram()">📸<br>Instagram</div>
-    <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
-    <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
-  </div>
-</div>
-
-<!-- ====== КОРЗИНА ====== -->
-
-<!-- кнопка корзины -->
-<div class="cart-btn" id="cartBtn" onclick="openCart()">
-  🛒
-  <div class="badge" id="cartCount">0</div>
-</div>
-
-<!-- модальное окно -->
-<div class="cart-modal" id="cartModal">
-  <div class="back" onclick="closeCart()">← Назад</div>
-  <h3>Ваш заказ</h3>
-  <div id="cartItems"></div>
-  <div id="total"></div>
-</div>
-
 <script>
 
 /* ====== API ====== */
-const MENU_API = "https://opensheet.elk.sh/.../Menu"; // обычное меню
-const BAR_API = "https://opensheet.elk.sh/.../Bar";   // бар
+const MENU_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Menu";
+const BAR_API = "https://opensheet.elk.sh/1aM-b8gNRiDYoRxXYAybXe-cA4RLPybxaOYPkJUVLlfw/Bar";
 
 /* ====== СОСТОЯНИЕ ====== */
-let menuData = {}; // данные меню по категориям
-let cart = {};     // корзина
-let currentAPI = MENU_API; // текущий источник данных
+let menuData = {};
+let cart = {};
+let currentAPI = MENU_API;
 
 /* ====== НАВИГАЦИЯ ====== */
+function openMenu(){currentAPI=MENU_API;openScreen("Меню");}
+function openBar(){currentAPI=BAR_API;openScreen("Барное меню");}
 
-// открыть меню
-function openMenu(){
-  currentAPI=MENU_API;
-  openScreen("Меню");
-}
-
-// открыть бар
-function openBar(){
-  currentAPI=BAR_API;
-  openScreen("Барное меню");
-}
-
-// открыть контакты
 function openContacts(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
@@ -289,17 +20,15 @@ function openContacts(){
   header.innerText="Контакты";
 }
 
-// универсальное открытие экрана
 function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
   contactsScreen.classList.add("hidden");
   header.innerText=title;
 
-  loadData(currentAPI); // загрузка данных
+  loadData(currentAPI);
 }
 
-// назад на главный экран
 function goHome(){
   home.classList.remove("hidden");
   menuScreen.classList.add("hidden");
@@ -307,27 +36,59 @@ function goHome(){
   header.innerText="Главное меню";
 }
 
-/* ====== ЗАГРУЗКА ДАННЫХ ====== */
+/* ====== ЗАГРУЗКА ДАННЫХ (УЛУЧШЕНО) ====== */
 async function loadData(api){
-  const res=await fetch(api);
-  const data=await res.json();
 
-  menuData={};
+  // loader (пока грузится)
+  menu.innerHTML = "Загрузка...";
+  categories.innerHTML = "";
 
-  // группировка по категориям
-  data.forEach(item=>{
-    const cat=(item.category||item.Category||"").trim();
-    if(!cat)return;
+  try {
+    const res = await fetch(api);
 
-    if(!menuData[cat])menuData[cat]=[];
-    menuData[cat].push(item);
-  });
+    if(!res.ok){
+      throw new Error("Ошибка сети: " + res.status);
+    }
 
-  renderCategories();
-  showCategory(Object.keys(menuData)[0]);
+    const data = await res.json();
+    console.log("DATA:", data);
+
+    if(!Array.isArray(data) || data.length === 0){
+      throw new Error("Пустой ответ API");
+    }
+
+    menuData = {};
+
+    data.forEach(item=>{
+      const cat = (item.category || item.Category || "").trim();
+      if(!cat) return;
+
+      if(!menuData[cat]) menuData[cat] = [];
+      menuData[cat].push(item);
+    });
+
+    const keys = Object.keys(menuData);
+
+    if(keys.length === 0){
+      throw new Error("Нет категорий в данных");
+    }
+
+    renderCategories();
+    showCategory(keys[0]);
+
+  } catch(e) {
+    console.error("Ошибка загрузки:", e);
+
+    menu.innerHTML = `
+      <div style="padding:20px; color:red;">
+        Ошибка загрузки меню<br><br>
+        Проверь API или интернет
+      </div>
+    `;
+  }
 }
 
-/* ====== РЕНДЕР КАТЕГОРИЙ ====== */
+/* ====== КАТЕГОРИИ ====== */
 function renderCategories(){
   categories.innerHTML="";
 
@@ -336,7 +97,6 @@ function renderCategories(){
     d.className="category";
     d.innerText=cat;
 
-    // клик по категории
     d.onclick=()=>{
       document.querySelectorAll(".category").forEach(e=>e.classList.remove("active"));
       d.classList.add("active");
@@ -348,19 +108,24 @@ function renderCategories(){
   });
 }
 
-/* ====== РЕНДЕР БЛЮД ====== */
+/* ====== МЕНЮ ====== */
 function showCategory(cat){
+
+  if(!cat || !menuData[cat]){
+    menu.innerHTML = "Нет данных";
+    return;
+  }
+
   menu.innerHTML="";
 
   menuData[cat].forEach(item=>{
-    const name=item.name||item.Name;
-    const price=item.price||item.Price;
+    const name=item.name||item.Name||"Без названия";
+    const price=item.price||item.Price||"0";
     const count=cart[name]?.count||0;
 
     const div=document.createElement("div");
     div.className="card";
 
-    // динамический HTML карточки
     div.innerHTML=`
       <div>
         <div>${name}</div>
@@ -384,32 +149,30 @@ function showCategory(cat){
   });
 }
 
-/* ====== ЛОГИКА КОРЗИНЫ ====== */
+/* ====== КОРЗИНА ====== */
 function changeCount(name,delta){
 
-  // если товара нет — создаем
   if(!cart[name]) cart[name]={count:0,price:0};
 
-  // находим цену
   const item = Object.values(menuData).flat().find(i => (i.name||i.Name) === name);
+
+  if(!item) return;
+
   const price = parseInt((item.price||item.Price||"0").replace(/\D/g,'')) || 0;
 
   cart[name].count+=delta;
   cart[name].price=price;
 
-  // удаление если 0
   if(cart[name].count<=0) delete cart[name];
-
-  // ограничение
   if(cart[name]?.count>10) cart[name].count=10;
 
   updateCartCount();
 
-  // перерисовка
-  showCategory(document.querySelector(".category.active").innerText);
+  const active = document.querySelector(".category.active");
+  if(active) showCategory(active.innerText);
 }
 
-/* обновление счетчика */
+/* ====== СЧЕТЧИК ====== */
 function updateCartCount(){
   let total=0;
 
@@ -419,7 +182,6 @@ function updateCartCount(){
     cartBtn.classList.add("show");
     cartCount.innerText=total;
 
-    // анимация
     cartBtn.classList.add("bounce");
     setTimeout(()=>cartBtn.classList.remove("bounce"),300);
   } else {
@@ -427,7 +189,7 @@ function updateCartCount(){
   }
 }
 
-/* ====== ОКНО КОРЗИНЫ ====== */
+/* ====== КОРЗИНА UI ====== */
 function openCart(){
   cartModal.style.display="block";
   renderCart();
@@ -437,7 +199,6 @@ function closeCart(){
   cartModal.style.display="none";
 }
 
-/* рендер корзины */
 function renderCart(){
   let total=0;
   cartItems.innerHTML="";
@@ -455,15 +216,16 @@ function renderCart(){
     cartItems.appendChild(div);
   });
 
-  document.getElementById("total").innerText="Итого: "+total+" сум";
+  totalEl.innerText="Итого: "+total+" сум";
 }
 
-/* удалить товар */
 function removeItem(name){
   delete cart[name];
   updateCartCount();
   renderCart();
-  showCategory(document.querySelector(".category.active").innerText);
+
+  const active = document.querySelector(".category.active");
+  if(active) showCategory(active.innerText);
 }
 
 /* ====== КОНТАКТЫ ====== */
@@ -472,14 +234,10 @@ function openInstagram(){window.open("https://instagram.com/","_blank");}
 function openTelegram(){window.open("https://t.me/","_blank");}
 function callPhone(){window.location.href="tel:+998901234567";}
 
-/* ====== ИНИЦИАЛИЗАЦИЯ ====== */
+/* ====== СТАРТ ====== */
 loadData(MENU_API);
 
-/* Telegram WebApp */
 const tg=window.Telegram.WebApp;
 tg.expand();
 
 </script>
-
-</body>
-</html>
