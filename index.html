@@ -193,6 +193,55 @@ header {
   margin-left:10px;
   cursor:pointer;
 }
+
+#reservationScreen {
+  padding:15px;
+}
+
+.reservation-form {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:10px;
+}
+
+.reservation-form label {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:14px;
+}
+
+.reservation-form input,
+.reservation-form textarea {
+  background:#1a1a1a;
+  color:white;
+  border:1px solid #2a2a2a;
+  border-radius:10px;
+  padding:12px;
+  font:inherit;
+}
+
+.reservation-form textarea {
+  min-height:80px;
+  resize:vertical;
+}
+
+.submit-btn {
+  background:#00ffcc;
+  color:black;
+  border:none;
+  border-radius:10px;
+  padding:14px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.status {
+  min-height:20px;
+  padding:0 10px;
+  color:#00ffcc;
+}
 </style>
 </head>
 
@@ -205,6 +254,7 @@ header {
 <div id="home" class="home">
   <div class="tile" onclick="openMenu()">Меню</div>
   <div class="tile" onclick="openBar()">Барное меню</div>
+  <div class="tile" onclick="openReservation()">Бронирование</div>
   <div class="tile">Оставить отзыв</div>
   <div class="tile">Фотоотчет</div>
   <div class="tile">Акции</div>
@@ -230,6 +280,46 @@ header {
   </div>
 </div>
 
+<!-- === ЭКРАН БРОНИРОВАНИЯ === -->
+<div id="reservationScreen" class="hidden">
+  <div class="back" onclick="goHome()">← Назад</div>
+
+  <form class="reservation-form" onsubmit="submitReservation(event)">
+    <label>
+      Имя
+      <input id="reservationName" type="text" autocomplete="name" required />
+    </label>
+
+    <label>
+      Телефон
+      <input id="reservationPhone" type="tel" autocomplete="tel" required />
+    </label>
+
+    <label>
+      Дата
+      <input id="reservationDate" type="date" required />
+    </label>
+
+    <label>
+      Время
+      <input id="reservationTime" type="time" required />
+    </label>
+
+    <label>
+      Количество гостей
+      <input id="reservationGuests" type="number" min="1" max="30" value="2" required />
+    </label>
+
+    <label>
+      Комментарий
+      <textarea id="reservationComment" placeholder="Пожелания по столику"></textarea>
+    </label>
+
+    <button class="submit-btn" type="submit">Отправить заявку</button>
+  </form>
+
+  <div class="status" id="reservationStatus"></div>
+</div>
 <!-- === КНОПКА КОРЗИНЫ === -->
 <div class="cart-btn" id="cartBtn" onclick="openCart()">
   🛒
@@ -270,16 +360,29 @@ function openContacts(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
   cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
   contactsScreen.classList.remove("hidden");
   header.innerText="Контакты";
 }
 
+
+/* Бронирование */
+function openReservation(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
+  reservationScreen.classList.remove("hidden");
+
+  header.innerText="Бронирование";
+}
 /* Универсальное открытие экрана меню */
 function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
   contactsScreen.classList.add("hidden");
   cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
 
   header.innerText=title;
 
@@ -292,6 +395,7 @@ function goHome(){
   menuScreen.classList.add("hidden");
   contactsScreen.classList.add("hidden");
   cartScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
 
   header.innerText="Главное меню";
 }
@@ -465,6 +569,7 @@ function openCart(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
   contactsScreen.classList.add("hidden");
+  reservationScreen.classList.add("hidden");
   cartScreen.classList.remove("hidden");
 
   header.innerText = "Ваш заказ";
@@ -516,6 +621,30 @@ function removeItem(name){
   if(activeCategory) showCategory(activeCategory);
 }
 
+
+/* === БРОНИРОВАНИЕ === */
+function submitReservation(event){
+  event.preventDefault();
+
+  const reservation = {
+    type: "reservation",
+    name: reservationName.value.trim(),
+    phone: reservationPhone.value.trim(),
+    date: reservationDate.value,
+    time: reservationTime.value,
+    guests: reservationGuests.value,
+    comment: reservationComment.value.trim()
+  };
+
+  reservationStatus.innerText = "Заявка отправлена. Мы скоро свяжемся с вами.";
+
+  if(tg?.sendData){
+    tg.sendData(JSON.stringify(reservation));
+    return;
+  }
+
+  alert("Заявка на бронирование отправлена");
+}
 /* === КОНТАКТЫ === */
 function openMap(){window.open("https://maps.google.com/?q=Ташкент","_blank");}
 function openInstagram(){window.open("https://instagram.com/","_blank");}
@@ -532,5 +661,7 @@ tg?.expand();
 
 </body>
 </html>
+
+
 
 
