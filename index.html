@@ -423,6 +423,27 @@ function openCart(){
   renderCart();
 }
 
+// корзина
+function openCart(){
+  home.classList.add("hidden");
+  menuScreen.classList.add("hidden");
+  contactsScreen.classList.add("hidden");
+  cartScreen.classList.remove("hidden");
+
+  header.innerText = "Ваш заказ";
+
+  renderCart();
+}
+
+function goBackFromCart(){
+  cartScreen.classList.add("hidden");
+
+  // возвращаемся в меню
+  menuScreen.classList.remove("hidden");
+
+  header.innerText = "Меню";
+}
+
 function closeCart(){
   cartModal.style.display="none";
 }
