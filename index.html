@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Bar App</title>
 
 <!-- Подключение Telegram WebApp SDK -->
@@ -236,7 +236,7 @@ header {
   <div class="badge" id="cartCount">0</div>
 </div>
 
-<!-- === МОДАЛКА КОРЗИНЫ === -->
+<!-- === ЭКРАН КОРЗИНЫ === -->
 <div id="cartScreen" class="hidden">
   <div class="back" onclick="goBackFromCart()">← Назад</div>
   <h3>Ваш заказ</h3>
@@ -269,6 +269,7 @@ function openBar(){
 function openContacts(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
   contactsScreen.classList.remove("hidden");
   header.innerText="Контакты";
 }
@@ -278,6 +279,7 @@ function openScreen(title){
   home.classList.add("hidden");
   menuScreen.classList.remove("hidden");
   contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
 
   header.innerText=title;
 
@@ -289,33 +291,50 @@ function goHome(){
   home.classList.remove("hidden");
   menuScreen.classList.add("hidden");
   contactsScreen.classList.add("hidden");
+  cartScreen.classList.add("hidden");
 
   header.innerText="Главное меню";
 }
 
 /* === ЗАГРУЗКА ДАННЫХ === */
 async function loadData(api){
-  const res=await fetch(api);
-  const data=await res.json();
+  try {
+    categories.replaceChildren();
+    menu.textContent = "Загрузка...";
 
-  menuData={};
+    const res=await fetch(api);
+    if(!res.ok) throw new Error("Не удалось загрузить меню");
 
-  /* Группировка по категориям */
-  data.forEach(item=>{
-    const cat=(item.category||item.Category||"").trim();
-    if(!cat)return;
+    const data=await res.json();
+    menuData={};
 
-    if(!menuData[cat])menuData[cat]=[];
-    menuData[cat].push(item);
-  });
+    /* Группировка по категориям */
+    data.forEach(item=>{
+      const cat=(item.category||item.Category||"").trim();
+      if(!cat)return;
 
-  renderCategories();
-  showCategory(Object.keys(menuData)[0]);
+      if(!menuData[cat])menuData[cat]=[];
+      menuData[cat].push(item);
+    });
+
+    const firstCategory = Object.keys(menuData)[0];
+    renderCategories();
+
+    if(firstCategory){
+      showCategory(firstCategory);
+    } else {
+      menu.textContent = "Меню пока пустое";
+    }
+  } catch (error) {
+    console.error(error);
+    categories.replaceChildren();
+    menu.textContent = "Не удалось загрузить меню. Попробуйте позже.";
+  }
 }
 
 /* === ОТРИСОВКА КАТЕГОРИЙ === */
 function renderCategories(){
-  categories.innerHTML="";
+  categories.replaceChildren();
 
   Object.keys(menuData).forEach((cat,i)=>{
     const d=document.createElement("div");
@@ -339,49 +358,75 @@ function renderCategories(){
 
 /* === ОТРИСОВКА БЛЮД === */
 function showCategory(cat){
-  menu.innerHTML="";
+  menu.replaceChildren();
+
+  if(!cat || !menuData[cat]){
+    menu.textContent = "Выберите категорию";
+    return;
+  }
 
   menuData[cat].forEach(item=>{
-    const name=item.name||item.Name;
-    const price=item.price||item.Price;
+    const name=item.name||item.Name||"Без названия";
+    const price=item.price||item.Price||"0";
     const count=cart[name]?.count||0;
 
     const div=document.createElement("div");
     div.className="card";
 
-    /* HTML карточки */
-    div.innerHTML=`
-      <div>
-        <div>${name}</div>
-        <div>${price} сум</div>
-      </div>
+    const info=document.createElement("div");
 
-      <div class="counter">
-        ${
-          count===0
-          ? `<button class="btn" onclick="changeCount('${name}',1)">+</button>`
-          : `
-            <button class="btn" onclick="changeCount('${name}',-1)">-</button>
-            <span>${count}</span>
-            <button class="btn" onclick="changeCount('${name}',1)">+</button>
-          `
-        }
-      </div>
-    `;
+    const title=document.createElement("div");
+    title.textContent=name;
 
+    const priceText=document.createElement("div");
+    priceText.textContent=`${price} сум`;
+
+    info.append(title, priceText);
+
+    const counter=document.createElement("div");
+    counter.className="counter";
+
+    if(count===0){
+      counter.appendChild(createCountButton("+", () => changeCount(name, 1)));
+    } else {
+      const countText=document.createElement("span");
+      countText.textContent=count;
+
+      counter.append(
+        createCountButton("-", () => changeCount(name, -1)),
+        countText,
+        createCountButton("+", () => changeCount(name, 1))
+      );
+    }
+
+    div.append(info, counter);
     menu.appendChild(div);
   });
 }
 
+function createCountButton(text, onClick){
+  const button=document.createElement("button");
+  button.className="btn";
+  button.type="button";
+  button.textContent=text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function getActiveCategory(){
+  return document.querySelector(".category.active")?.innerText;
+}
+
 /* === ИЗМЕНЕНИЕ КОЛИЧЕСТВА === */
 function changeCount(name,delta){
-  if(!cart[name]) cart[name]={count:0,price:0};
-
   const item = Object.values(menuData).flat()
     .find(i => (i.name||i.Name) === name);
 
+  if(!item) return;
+  if(!cart[name]) cart[name]={count:0,price:0};
+
   const price = parseInt(
-    (item.price||item.Price||"0").replace(/\D/g,'')
+    String(item.price||item.Price||"0").replace(/\D/g,'')
   ) || 0;
 
   cart[name].count+=delta;
@@ -391,10 +436,7 @@ function changeCount(name,delta){
   if(cart[name]?.count>10) cart[name].count=10;
 
   updateCartCount();
-
-  showCategory(
-    document.querySelector(".category.active").innerText
-  );
+  showCategory(getActiveCategory());
 }
 
 /* === ОБНОВЛЕНИЕ КОРЗИНЫ === */
@@ -414,16 +456,11 @@ function updateCartCount(){
 
   } else {
     cartBtn.classList.remove("show");
+    cartCount.innerText=0;
   }
 }
 
-/* === МОДАЛКА КОРЗИНЫ === */
-function openCart(){
-  cartModal.style.display="block";
-  renderCart();
-}
-
-// корзина
+/* === ЭКРАН КОРЗИНЫ === */
 function openCart(){
   home.classList.add("hidden");
   menuScreen.classList.add("hidden");
@@ -437,21 +474,15 @@ function openCart(){
 
 function goBackFromCart(){
   cartScreen.classList.add("hidden");
-
-  // возвращаемся в меню
   menuScreen.classList.remove("hidden");
 
-  header.innerText = "Меню";
-}
-
-function closeCart(){
-  cartModal.style.display="none";
+  header.innerText = currentAPI===BAR_API ? "Барное меню" : "Меню";
 }
 
 /* === ОТРИСОВКА КОРЗИНЫ === */
 function renderCart(){
   let total=0;
-  cartItems.innerHTML="";
+  cartItems.replaceChildren();
 
   Object.keys(cart).forEach(name=>{
     const item=cart[name];
@@ -460,15 +491,17 @@ function renderCart(){
     total+=sum;
 
     const div=document.createElement("div");
+    const text=document.createElement("span");
+    text.textContent=`${name} x${item.count} — ${sum} сум`;
 
-    div.innerHTML=`
-      ${name} x${item.count} — ${sum} сум
-      <span class="remove" onclick="removeItem('${name}')">❌</span>
-    `;
+    const remove=document.createElement("span");
+    remove.className="remove";
+    remove.textContent="❌";
+    remove.addEventListener("click", () => removeItem(name));
 
+    div.append(text, remove);
     cartItems.appendChild(div);
   });
-
   document.getElementById("total").innerText="Итого: "+total+" сум";
 }
 
@@ -479,9 +512,8 @@ function removeItem(name){
   updateCartCount();
   renderCart();
 
-  showCategory(
-    document.querySelector(".category.active").innerText
-  );
+  const activeCategory = getActiveCategory();
+  if(activeCategory) showCategory(activeCategory);
 }
 
 /* === КОНТАКТЫ === */
@@ -494,9 +526,11 @@ function callPhone(){window.location.href="tel:+998901234567";}
 loadData(MENU_API);
 
 /* Инициализация Telegram Mini App */
-const tg=window.Telegram.WebApp;
-tg.expand();
+const tg=window.Telegram?.WebApp;
+tg?.expand();
 </script>
 
 </body>
 </html>
+
+
