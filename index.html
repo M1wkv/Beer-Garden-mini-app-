@@ -168,7 +168,44 @@ header {
   padding:4px 7px;
 }
 
+/* === МОДАЛКА КОРЗИНЫ === */
+.cart-modal {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  height:80%;
 
+  background:#111;
+  border-radius:20px 20px 0 0;
+  padding:20px;
+
+  display:none;
+
+  /* анимация появления */
+  animation:slideUp 0.3s ease;
+}
+
+/* Анимация выезда снизу */
+@keyframes slideUp {
+  from {transform:translateY(100%);}
+  to {transform:translateY(0);}
+}
+
+/* Скрытие элементов */
+.hidden {display:none;}
+
+/* Кнопка назад */
+.back {
+  padding:10px;
+  cursor:pointer;
+}
+
+/* Кнопка удаления из корзины */
+.remove {
+  color:red;
+  margin-left:10px;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -204,16 +241,6 @@ header {
     <div class="tile" onclick="openTelegram()">💬<br>Telegram</div>
     <div class="tile" onclick="callPhone()">📞<br>Позвонить</div>
   </div>
-</div>
-
-<!-- === ЭКРАН КОРЗИНЫ (вместо попапа) === -->
-<div id="cartScreen" class="hidden">
-  <div class="back" onclick="closeCart()">← Назад</div>
-
-  <h3 style="padding:10px">Ваш заказ</h3>
-
-  <div id="cartItems"></div>
-  <div id="total" style="padding:10px;font-weight:bold;"></div>
 </div>
 
 <!-- === КНОПКА КОРЗИНЫ === -->
