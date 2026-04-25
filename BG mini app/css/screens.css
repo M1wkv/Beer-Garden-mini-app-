@@ -1,0 +1,169 @@
+.home-screen {
+  width: 100%;
+  max-width: none;
+  padding: 0 var(--edge) 45px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.home-hero {
+  position: relative;
+  width: calc(100% + var(--edge-double));
+  height: min(62vh, 531px);
+  min-height: clamp(316px, 90vw, 382px);
+  margin: 0 calc(var(--edge) * -1);
+  overflow: hidden;
+}
+
+.home-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 35%;
+  background: linear-gradient(180deg, rgba(5, 5, 5, 0), var(--bg) 92%);
+}
+
+.home-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.slider-dots {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin: -23px 0 19px;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.slider-dots .active {
+  width: 37px;
+}
+
+.home-grid {
+  position: absolute;
+  left: 50%;
+  bottom: calc(45px + env(safe-area-inset-bottom));
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  width: calc(100% - var(--edge-double));
+  max-width: 354px;
+  margin: 0;
+  transform: translateX(-50%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body[data-screen="home"].cart-visible .home-grid {
+  transform: translateX(-50%) translateY(-46px);
+}
+
+.tile-wide {
+  grid-column: 1 / -1;
+  min-height: 47px;
+  align-items: center;
+}
+
+.contacts-grid {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: min(100%, 354px);
+  margin: 0 auto;
+  padding-top: 20px;
+  transform: none;
+}
+
+.menu-screen {
+  padding-top: var(--menu-top);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+  transition: padding-top 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-screen::-webkit-scrollbar {
+  display: none;
+}
+
+body.header-hidden .menu-screen {
+  padding-top: 17px;
+}
+
+body.cart-visible .menu-screen {
+  padding-bottom: 166px;
+}
+
+.reservation-screen,
+#contactsScreen {
+  padding-top: var(--screen-top);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+}
+
+.reservation-screen::-webkit-scrollbar,
+#contactsScreen::-webkit-scrollbar {
+  display: none;
+}
+
+.cart-screen {
+  padding-top: var(--screen-top);
+  padding-bottom: 166px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  scroll-padding-bottom: 166px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+}
+
+.cart-screen::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 430px) {
+  .home-screen {
+    padding-right: var(--edge);
+    padding-left: var(--edge);
+  }
+
+  .home-hero {
+    width: calc(100% + var(--edge-double));
+    min-height: 316px;
+    margin-right: calc(var(--edge) * -1);
+    margin-left: calc(var(--edge) * -1);
+  }
+
+  .home-grid {
+    gap: 7px;
+  }
+
+  .tile {
+    min-height: 86px;
+  }
+
+  .tile-wide {
+    min-height: 47px;
+  }
+}
