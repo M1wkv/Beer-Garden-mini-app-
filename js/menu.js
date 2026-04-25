@@ -1,0 +1,671 @@
+const selectedVariants = {};
+const menuCache = {};
+let lastLoadId = 0;
+let menuScrollSpyFrame = null;
+let menuProgrammaticScrollUntil = 0;
+let categoryAlignTimeout = null;
+
+async function loadData(api) {
+  const loadId = ++lastLoadId;
+
+  try {
+    Object.keys(selectedVariants).forEach((key) => delete selectedVariants[key]);
+    elements.categories.replaceChildren();
+    elements.menu.textContent = "Загрузка...";
+
+    const items = await fetchMenuData(api);
+
+    if (loadId !== lastLoadId) {
+      return;
+    }
+
+    menuData = groupMenuByCategory(items);
+    syncCartWithMenuData();
+
+    const firstCategory = getInitialCategory();
+    renderCategories();
+    renderMenuSections();
+
+    if (firstCategory) {
+      setActiveCategory(firstCategory, "auto");
+      scrollMenuToCategory(firstCategory, "auto");
+    } else {
+      elements.menu.textContent = "Меню пока пустое";
+    }
+  } catch (error) {
+    console.error(error);
+    reportClientError("menu_load_failed", error, {
+      api,
+      screen: document.body.dataset.screen
+    });
+    elements.categories.replaceChildren();
+    elements.menu.textContent = "Не удалось загрузить меню. Попробуйте позже.";
+  }
+}
+
+async function fetchMenuData(api) {
+  const section = MENU_SECTIONS[api];
+
+  if (BACKEND_BASE_URL && section) {
+    const storedMenu = getStoredMenu(section);
+
+    if (storedMenu?.items?.length) {
+      menuCache[api] = storedMenu.items;
+      refreshMenuData(api, section, storedMenu);
+      return storedMenu.items;
+    }
+
+    try {
+      const payload = await requestBackendMenu(section, storedMenu);
+      const items = saveBackendMenu(api, section, payload);
+      return items;
+    } catch (error) {
+      reportClientError("menu_backend_failed", error, { section });
+
+      if (storedMenu?.items) {
+        menuCache[api] = storedMenu.items;
+        return storedMenu.items;
+      }
+    }
+  }
+
+  if (!menuCache[api]) {
+    const response = await fetch(api);
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить меню");
+    }
+
+    menuCache[api] = normalizeMenuItems(await response.json());
+  }
+
+  return menuCache[api];
+}
+
+async function requestBackendMenu(section, storedMenu = null) {
+  const backendUrl = new URL("/api/menu", BACKEND_BASE_URL);
+  backendUrl.searchParams.set("section", section);
+
+  if (storedMenu?.version) {
+    backendUrl.searchParams.set("version", storedMenu.version);
+  }
+
+  const response = await fetch(backendUrl.toString(), {
+    headers: storedMenu?.version ? { "If-None-Match": storedMenu.version } : {}
+  });
+
+  if (response.status === 304) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error("Menu backend request failed");
+  }
+
+  return response.json();
+}
+
+function saveBackendMenu(api, section, payload) {
+  if (!payload) {
+    return getStoredMenu(section)?.items || menuCache[api] || [];
+  }
+
+  const items = normalizeMenuItems(payload.items);
+  menuCache[api] = items;
+  saveStoredMenu(section, {
+    version: payload.version,
+    updatedAt: payload.updatedAt,
+    items
+  });
+  return items;
+}
+
+function refreshMenuData(api, section, storedMenu) {
+  requestBackendMenu(section, storedMenu)
+    .then((payload) => {
+      if (!payload || payload.version === storedMenu.version) {
+        return;
+      }
+
+      const items = saveBackendMenu(api, section, payload);
+
+      if (api === currentAPI && document.body.dataset.screen === "menuScreen") {
+        rerenderMenuData(items);
+      }
+    })
+    .catch((error) => {
+      reportClientError("menu_background_refresh_failed", error, { section });
+    });
+}
+
+function rerenderMenuData(items) {
+  const activeCategory = getSavedCategory();
+  menuData = groupMenuByCategory(items);
+  syncCartWithMenuData();
+  renderCategories();
+  renderMenuSections();
+
+  const nextCategory = activeCategory && menuData[activeCategory] ? activeCategory : getInitialCategory();
+
+  if (nextCategory) {
+    setActiveCategory(nextCategory, "auto");
+    scrollMenuToCategory(nextCategory, "auto");
+    return;
+  }
+
+  elements.menu.textContent = "Меню пока пустое";
+}
+
+function normalizeMenuItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.filter(isValidMenuItem);
+}
+
+function isValidMenuItem(item) {
+  const name = getField(item, "name", "Name", "Название").trim();
+  const category = getField(item, "category", "Category", "Категория").trim();
+  const price = getField(item, "price 1", "Price 1", "Цена 1").trim();
+
+  return Boolean(name && category && parsePrice(price));
+}
+
+function getStoredMenus() {
+  try {
+    return JSON.parse(localStorage.getItem(MENU_STORAGE_KEY)) || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function getStoredMenu(section) {
+  return getStoredMenus()[section];
+}
+
+function saveStoredMenu(section, payload) {
+  try {
+    const storedMenus = getStoredMenus();
+    storedMenus[section] = payload;
+    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(storedMenus));
+  } catch (error) {
+    reportClientError("menu_cache_save_failed", error, { section });
+  }
+}
+
+function groupMenuByCategory(data) {
+  return data.reduce((grouped, item) => {
+    const category = getField(item, "category", "Category", "Категория").trim();
+    if (!category) {
+      return grouped;
+    }
+
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
+
+    grouped[category].push(item);
+    return grouped;
+  }, {});
+}
+
+function renderCategories() {
+  elements.categories.replaceChildren();
+  const activeCategory = getInitialCategory();
+
+  Object.keys(menuData).forEach((category) => {
+    const categoryButton = document.createElement("button");
+    categoryButton.className = "category";
+    categoryButton.type = "button";
+    categoryButton.textContent = category;
+
+    categoryButton.addEventListener("click", () => {
+      setActiveCategory(category);
+      scrollMenuToCategory(category);
+    });
+
+    if (category === activeCategory) {
+      categoryButton.classList.add("active");
+    }
+
+    elements.categories.appendChild(categoryButton);
+  });
+}
+
+function renderMenuSections() {
+  elements.menu.replaceChildren();
+
+  Object.keys(menuData).forEach((category) => {
+    const section = document.createElement("section");
+    section.className = "menu-section";
+    section.dataset.category = category;
+
+    const title = document.createElement("h2");
+    title.className = "menu-section-title";
+    title.textContent = category;
+    section.appendChild(title);
+
+    menuData[category].forEach((item) => {
+      section.appendChild(createMenuCard(item));
+    });
+
+    elements.menu.appendChild(section);
+  });
+}
+
+function setActiveCategory(category, behavior = "smooth", shouldAlignCategory = true) {
+  if (!category) {
+    return;
+  }
+
+  saveActiveCategory(category);
+  elements.categories.querySelectorAll(".category").forEach((button) => {
+    button.classList.toggle("active", button.textContent === category);
+  });
+
+  if (shouldAlignCategory) {
+    alignCategoryToStart(category, behavior);
+  }
+}
+
+function scrollCategoryToStart(categoryButton, behavior = "smooth") {
+  const paddingLeft = parseFloat(getComputedStyle(elements.categories).paddingLeft) || 0;
+  const nextLeft = Math.max(categoryButton.offsetLeft - paddingLeft, 0);
+
+  elements.categories.scrollTo({
+    left: nextLeft,
+    behavior
+  });
+}
+
+function resetCategoriesScroll() {
+  requestAnimationFrame(() => {
+    elements.categories.scrollTo({
+      left: 0,
+      behavior: "auto"
+    });
+  });
+}
+
+function getSavedCategory() {
+  return activeCategories[currentAPI];
+}
+
+function saveActiveCategory(category) {
+  activeCategories[currentAPI] = category;
+}
+
+function getInitialCategory() {
+  const savedCategory = getSavedCategory();
+
+  if (savedCategory && menuData[savedCategory]) {
+    return savedCategory;
+  }
+
+  return Object.keys(menuData)[0];
+}
+
+function alignCategoryToStart(category, behavior = "auto") {
+  requestAnimationFrame(() => {
+    const categoryButton = Array.from(elements.categories.querySelectorAll(".category")).find((button) => {
+      return button.textContent === category;
+    });
+
+    if (categoryButton) {
+      scrollCategoryToStart(categoryButton, behavior);
+      return;
+    }
+
+    resetCategoriesScroll();
+  });
+}
+
+function alignActiveCategoryToStart() {
+  requestAnimationFrame(() => {
+    const activeCategory = elements.categories.querySelector(".category.active");
+
+    if (activeCategory) {
+      scrollCategoryToStart(activeCategory, "auto");
+      return;
+    }
+
+    resetCategoriesScroll();
+  });
+}
+
+function scheduleActiveCategoryAlignment(category) {
+  window.clearTimeout(categoryAlignTimeout);
+  categoryAlignTimeout = window.setTimeout(() => {
+    if (
+      category &&
+      getSavedCategory() === category &&
+      document.body.dataset.screen === "menuScreen" &&
+      !isMenuProgrammaticScrollActive()
+    ) {
+      alignCategoryToStart(category, "smooth");
+    }
+  }, 140);
+}
+
+function getMenuSection(category) {
+  return Array.from(elements.menu.querySelectorAll(".menu-section")).find((section) => {
+    return section.dataset.category === category;
+  });
+}
+
+function scrollMenuToCategory(category, behavior = "smooth") {
+  menuProgrammaticScrollUntil = Date.now() + (behavior === "smooth" ? 800 : 180);
+  document.body.classList.remove("header-hidden");
+
+  requestAnimationFrame(() => {
+    const section = getMenuSection(category);
+
+    if (!section) {
+      return;
+    }
+
+    const topPadding = parseFloat(getComputedStyle(elements.menuScreen).paddingTop) || 0;
+    const nextTop = Math.max(section.offsetTop - topPadding, 0);
+    elements.menuScreen.scrollTo({
+      top: nextTop,
+      behavior
+    });
+  });
+}
+
+function isMenuProgrammaticScrollActive() {
+  return Date.now() < menuProgrammaticScrollUntil;
+}
+
+function updateActiveCategoryFromScroll() {
+  const categories = Object.keys(menuData);
+
+  if (!categories.length || document.body.dataset.screen !== "menuScreen" || isMenuProgrammaticScrollActive()) {
+    return;
+  }
+
+  const topPadding = parseFloat(getComputedStyle(elements.menuScreen).paddingTop) || 0;
+  const scrollPosition = elements.menuScreen.scrollTop + topPadding + 2;
+  let nextCategory = categories[0];
+
+  categories.forEach((category) => {
+    const section = getMenuSection(category);
+
+    if (section && section.offsetTop <= scrollPosition) {
+      nextCategory = category;
+    }
+  });
+
+  if (nextCategory && nextCategory !== getSavedCategory()) {
+    setActiveCategory(nextCategory, "auto", false);
+  }
+
+  scheduleActiveCategoryAlignment(nextCategory);
+}
+
+function initMenuScrollSpy() {
+  elements.menuScreen.addEventListener(
+    "scroll",
+    () => {
+      if (menuScrollSpyFrame) {
+        return;
+      }
+
+      menuScrollSpyFrame = requestAnimationFrame(() => {
+        menuScrollSpyFrame = null;
+        updateActiveCategoryFromScroll();
+      });
+    },
+    { passive: true }
+  );
+}
+
+function createMenuCard(item) {
+  const name = getItemName(item);
+  const price = getItemPrice(item, 1) || "0";
+  const description = getItemDescription(item, 1);
+  const hasDescription = Boolean(description);
+  const hasVariants = hasSecondPrice(item);
+  const firstKey = getCartKey(item, 1);
+  const count = cart[firstKey]?.count || 0;
+  const selectedOption = getSelectedOption(item);
+
+  const card = document.createElement("article");
+  card.className = hasVariants ? "card variant-card" : "card";
+  card.dataset.itemName = name;
+  card.addEventListener("click", (event) => {
+    if (hasVariants || event.target.closest(".btn, .option-btn") || (cart[firstKey]?.count || 0) > 0) {
+      return;
+    }
+
+    changeCount(firstKey, 1, item, 1);
+  });
+
+  const info = document.createElement("div");
+  info.className = "card-info";
+
+  const title = document.createElement("div");
+  title.className = "card-title";
+  title.textContent = name;
+
+  const descriptionText = document.createElement("div");
+  descriptionText.className = "card-description";
+  descriptionText.textContent = description;
+
+  info.appendChild(title);
+
+  if (hasVariants) {
+    info.appendChild(createVariantOptions(item));
+  } else if (hasDescription) {
+    info.appendChild(descriptionText);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+
+  const priceText = document.createElement("div");
+  priceText.className = "card-price";
+  priceText.textContent = hasVariants && selectedOption
+    ? formatMenuPrice(getItemPrice(item, selectedOption))
+    : formatMenuPriceRange(item);
+
+  const controls = createMenuControls(item, count);
+  actions.append(priceText);
+  if (controls) {
+    actions.appendChild(controls);
+  }
+  card.append(info, actions);
+  return card;
+}
+
+function createMenuControls(item, count) {
+  if (!hasSecondPrice(item)) {
+    return createCounter(getCartKey(item, 1), count, item, 1);
+  }
+
+  const selectedOption = getSelectedOption(item);
+  if (!selectedOption) {
+    return null;
+  }
+
+  const key = getCartKey(item, selectedOption);
+  return createCounter(key, cart[key]?.count || 0, item, selectedOption);
+}
+
+function createVariantOptions(item) {
+  const options = document.createElement("div");
+  options.className = "variant-options";
+  options.append(createVariantControl(item, 1), createVariantControl(item, 2));
+  return options;
+}
+
+function createVariantControl(item, optionIndex) {
+  return createOptionButton(item, optionIndex);
+}
+
+function createOptionButton(item, optionIndex) {
+  const name = getItemName(item);
+  const button = document.createElement("button");
+  button.className = getSelectedOption(item) === optionIndex ? "option-btn active" : "option-btn";
+  button.type = "button";
+  button.textContent = getItemDescription(item, optionIndex) || "+";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    selectedVariants[name] = optionIndex;
+    updateMenuCardCounter(getCartKey(item, optionIndex), name);
+  });
+  return button;
+}
+
+function createCounter(name, count, item = null, optionIndex = 1) {
+  const counter = document.createElement("div");
+  counter.className = count === 0 ? "counter single" : "counter";
+
+  if (count === 0) {
+    counter.appendChild(createCountButton("+", () => changeCount(name, 1, item, optionIndex)));
+    return counter;
+  }
+
+  const countText = document.createElement("span");
+  countText.className = "count-value";
+  countText.textContent = count;
+
+  counter.append(
+    createCountButton("-", () => changeCount(name, -1)),
+    countText,
+    createCountButton("+", () => changeCount(name, 1))
+  );
+
+  return counter;
+}
+
+function createCountButton(text, onClick) {
+  const button = document.createElement("button");
+  button.className = "btn";
+  button.type = "button";
+  button.dataset.action = text === "+" ? "add" : "remove";
+  button.setAttribute("aria-label", text === "+" ? "Добавить" : "Уменьшить");
+
+  const icon = document.createElement("img");
+  icon.className = "btn-icon";
+  icon.src = text === "+" ? "./icons/plus.svg" : "./icons/minus.svg";
+  icon.alt = "";
+
+  button.appendChild(icon);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function updateMenuCardCounter(key, itemName) {
+  const name = itemName || cart[key]?.name || key;
+  const card = Array.from(elements.menu.querySelectorAll(".card")).find((item) => {
+    return item.dataset.itemName === name;
+  });
+
+  if (!card) {
+    return;
+  }
+
+  const menuItem = findMenuItemByName(name);
+  const info = card.querySelector(".card-info");
+  const actions = card.querySelector(".card-actions");
+  const priceText = actions?.querySelector(".card-price");
+
+  if (!menuItem || !actions || !priceText) {
+    return;
+  }
+
+  const selectedOption = getSelectedOption(menuItem);
+  priceText.textContent = hasSecondPrice(menuItem) && selectedOption
+    ? formatMenuPrice(getItemPrice(menuItem, selectedOption))
+    : formatMenuPriceRange(menuItem);
+
+  const controls = createMenuControls(menuItem, cart[getCartKey(menuItem, 1)]?.count || 0);
+  actions.replaceChildren(priceText);
+  if (controls) {
+    actions.appendChild(controls);
+  }
+
+  if (hasSecondPrice(menuItem) && info) {
+    const oldOptions = info.querySelector(".variant-options");
+    oldOptions?.replaceWith(createVariantOptions(menuItem));
+  }
+}
+
+function getActiveCategory() {
+  return document.querySelector(".category.active")?.textContent;
+}
+
+function formatMenuPrice(price) {
+  const digits = String(price).replace(/\D/g, "");
+  if (!digits) {
+    return String(price).trim();
+  }
+
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function formatMenuPriceRange(item) {
+  const firstPrice = formatMenuPrice(getItemPrice(item, 1) || "0");
+  const secondPrice = getItemPrice(item, 2);
+
+  if (!secondPrice.trim()) {
+    return firstPrice;
+  }
+
+  return `${firstPrice} / ${formatMenuPrice(secondPrice)}`;
+}
+
+function getItemName(item) {
+  return getField(item, "name", "Name", "Название") || "Без названия";
+}
+
+function getItemPrice(item, optionIndex = 1) {
+  if (optionIndex === 2) {
+    return getField(item, "price 2", "Price 2", "Цена 2");
+  }
+
+  return getField(item, "price 1", "Price 1", "Цена 1");
+}
+
+function getItemDescription(item, optionIndex = 1) {
+  if (optionIndex === 2) {
+    return getField(item, "description 2", "Description 2", "Описание 2").trim();
+  }
+
+  return getField(item, "description 1", "Description 1", "Описание 1").trim();
+}
+
+function hasSecondPrice(item) {
+  return Boolean(getItemPrice(item, 2).trim());
+}
+
+function getCartKey(item, optionIndex = 1) {
+  const name = getItemName(item);
+  return hasSecondPrice(item) ? `${name}::${optionIndex}` : name;
+}
+
+function getSelectedOption(item) {
+  const name = getItemName(item);
+  if (selectedVariants[name]) {
+    return selectedVariants[name];
+  }
+
+  if (cart[getCartKey(item, 1)]?.count > 0) {
+    return 1;
+  }
+
+  if (cart[getCartKey(item, 2)]?.count > 0) {
+    return 2;
+  }
+
+  return null;
+}
+
+function getField(item, ...keys) {
+  const key = keys.find((field) => item[field] !== undefined && item[field] !== null);
+  return key ? String(item[key]) : "";
+}

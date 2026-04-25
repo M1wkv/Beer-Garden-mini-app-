@@ -1,0 +1,10 @@
+initLayoutMetrics();
+initViewportGuards();
+initHeaderAutoHide();
+initMenuScrollSpy();
+initErrorLogging();
+restoreCart();
+updateCartCount(false);
+setCurrentScreen("home");
+loadData(MENU_API);
+initTelegram();
